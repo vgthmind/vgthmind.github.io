@@ -273,7 +273,8 @@ main{flex:1;min-width:0;}
 
 .clip-video-wrap{aspect-ratio:16/9;background:#0d0d0d;}
 .clip-video-wrap video{width:100%;height:100%;object-fit:contain;}
-.clip-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.clip-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;}
+@media (min-width:640px){.clip-tabs{grid-template-columns:repeat(3,1fr);}}
 .clip-tab{
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.01em;
   padding:9px 14px;border:1px solid var(--line);background:var(--bg-raise);color:var(--steel);
