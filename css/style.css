@@ -176,7 +176,7 @@ main{flex:1;min-width:0;}
 .cover-contact a{text-decoration:none;border-bottom:1px solid var(--line);}
 
 /* ---------- Chapters ---------- */
-.chapter{padding:96px 64px 40px;max-width:var(--maxw);position:relative;}
+.chapter{padding:96px 64px 40px;max-width:var(--maxw);margin:0 auto;position:relative;}
 .chapter::before{
   content:'';position:absolute;top:80px;right:24px;width:220px;height:220px;
   background:radial-gradient(circle, rgba(180,190,196,0.16) 0%, transparent 70%);
@@ -380,7 +380,7 @@ main{flex:1;min-width:0;}
 .logo-burst .ray{position:absolute;left:50%;top:50%;background:linear-gradient(90deg,var(--chapter-accent,var(--blue)),transparent);height:2px;transform-origin:0 50%;opacity:0.4;}
 
 footer.contact{
-  padding:96px 64px 80px;max-width:var(--maxw);
+  padding:96px 64px 80px;max-width:var(--maxw);margin:0 auto;
 }
 footer.contact h2{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.4vw,42px);font-weight:700;margin:0 0 20px;}
 footer.contact .links{display:flex;flex-wrap:wrap;gap:24px;font-family:'IBM Plex Mono',monospace;font-size:13px;}
