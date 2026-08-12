@@ -7,12 +7,16 @@ document.addEventListener('DOMContentLoaded', function () {
       var ro = new ResizeObserver(function () { positionBleeds(); });
       ro.observe(main);
     }
-  } else {
-    // Fallback for browsers without ResizeObserver
-    window.addEventListener('load', positionBleeds);
-    setTimeout(positionBleeds, 300);
-    setTimeout(positionBleeds, 1000);
   }
+  // Always also run these, regardless of ResizeObserver support: some environments
+  // never fire the observer's initial callback, so don't rely on it alone.
+  window.addEventListener('load', positionBleeds);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(positionBleeds);
+  }
+  [100, 300, 700, 1500, 3000].forEach(function (ms) {
+    setTimeout(positionBleeds, ms);
+  });
 
   var layers = document.querySelectorAll('.parallax-layer');
   if (!layers.length) return;
