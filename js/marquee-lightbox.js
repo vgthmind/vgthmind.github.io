@@ -97,6 +97,7 @@ function initMarqueeLightbox() {
           open(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src), track);
         });
         btn.addEventListener('mouseleave', scheduleClose);
+      }
 
       btn.addEventListener('click', function () {
         open(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src), track);
