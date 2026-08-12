@@ -1,11 +1,18 @@
 document.addEventListener('DOMContentLoaded', function () {
   positionBleeds();
-  window.addEventListener('load', positionBleeds);
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(positionBleeds);
+
+  if ('ResizeObserver' in window) {
+    var main = document.querySelector('main');
+    if (main) {
+      var ro = new ResizeObserver(function () { positionBleeds(); });
+      ro.observe(main);
+    }
+  } else {
+    // Fallback for browsers without ResizeObserver
+    window.addEventListener('load', positionBleeds);
+    setTimeout(positionBleeds, 300);
+    setTimeout(positionBleeds, 1000);
   }
-  setTimeout(positionBleeds, 300);
-  setTimeout(positionBleeds, 1000);
 
   var layers = document.querySelectorAll('.parallax-layer');
   if (!layers.length) return;
@@ -37,10 +44,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Stretches .bg-bleed elements to span the full width of <main>, breaking out of
 // whatever narrower, centered container they're visually nested inside.
+// Guards against a zero-width <main> (e.g. mid-layout) so it never locks in a broken state.
 function positionBleeds() {
   var main = document.querySelector('main');
   if (!main) return;
   var mainRect = main.getBoundingClientRect();
+  if (mainRect.width < 50) return;
   document.querySelectorAll('.bg-bleed').forEach(function (wrap) {
     var parent = wrap.offsetParent;
     if (!parent) return;
