@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+function initParallax() {
   positionBleeds();
 
   if ('ResizeObserver' in window) {
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', function () { positionBleeds(); onScroll(); });
   update();
-});
+}
 
 // Stretches .bg-bleed elements to span the full width of <main>, breaking out of
 // whatever narrower, centered container they're visually nested inside.
@@ -61,4 +61,13 @@ function positionBleeds() {
     wrap.style.left = (mainRect.left - parentRect.left) + 'px';
     wrap.style.width = mainRect.width + 'px';
   });
+}
+
+// Defensive: if this script executes after DOMContentLoaded already fired
+// (possible with certain loading/caching setups), run immediately instead
+// of registering a listener for an event that will never come again.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initParallax);
+} else {
+  initParallax();
 }
