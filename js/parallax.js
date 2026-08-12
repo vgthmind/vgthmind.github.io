@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
+  positionBleeds();
+
   var layers = document.querySelectorAll('.parallax-layer');
   if (!layers.length) return;
 
@@ -23,6 +25,21 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
+  window.addEventListener('resize', function () { positionBleeds(); onScroll(); });
   update();
 });
+
+// Stretches .bg-bleed elements to span the full width of <main>, breaking out of
+// whatever narrower, centered container they're visually nested inside.
+function positionBleeds() {
+  var main = document.querySelector('main');
+  if (!main) return;
+  var mainRect = main.getBoundingClientRect();
+  document.querySelectorAll('.bg-bleed').forEach(function (wrap) {
+    var parent = wrap.offsetParent;
+    if (!parent) return;
+    var parentRect = parent.getBoundingClientRect();
+    wrap.style.left = (mainRect.left - parentRect.left) + 'px';
+    wrap.style.width = mainRect.width + 'px';
+  });
+}
