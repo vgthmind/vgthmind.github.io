@@ -11,6 +11,9 @@ function initMarqueeLightbox() {
 
   var currentList = [];
   var currentIndex = 0;
+  var currentTrack = null;
+  var closeTimer = null;
+  var pinned = false; // true once opened by click/tap: only closes via explicit close
 
   function showCurrent() {
     var src = currentList[currentIndex];
@@ -18,17 +21,34 @@ function initMarqueeLightbox() {
     bg.src = src;
   }
 
-  function openAt(list, index) {
+  function open(list, index, track) {
+    clearTimeout(closeTimer);
     currentList = list;
     currentIndex = index;
+    currentTrack = track;
     showCurrent();
     lightbox.classList.add('open');
     document.body.style.overflow = 'hidden';
+    if (track) track.classList.add('paused');
   }
 
   function close() {
+    clearTimeout(closeTimer);
     lightbox.classList.remove('open');
     document.body.style.overflow = '';
+    if (currentTrack) currentTrack.classList.remove('paused');
+    currentTrack = null;
+    pinned = false;
+  }
+
+  function scheduleClose() {
+    if (pinned) return;
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(close, 180);
+  }
+
+  function cancelScheduledClose() {
+    clearTimeout(closeTimer);
   }
 
   function next() {
@@ -45,6 +65,8 @@ function initMarqueeLightbox() {
   backdrop.addEventListener('click', close);
   nextBtn.addEventListener('click', next);
   prevBtn.addEventListener('click', prev);
+  lightbox.addEventListener('mouseenter', cancelScheduledClose);
+  lightbox.addEventListener('mouseleave', scheduleClose);
 
   document.addEventListener('keydown', function (e) {
     if (!lightbox.classList.contains('open')) return;
@@ -52,6 +74,8 @@ function initMarqueeLightbox() {
     if (e.key === 'ArrowRight') next();
     if (e.key === 'ArrowLeft') prev();
   });
+
+  var canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
   document.querySelectorAll('.marquee-wrap').forEach(function (wrap) {
     var seen = {};
@@ -66,10 +90,17 @@ function initMarqueeLightbox() {
 
     wrap.querySelectorAll('.marquee-item').forEach(function (btn) {
       var track = btn.closest('.marquee-track');
-      btn.addEventListener('mouseenter', function () { track.classList.add('paused'); });
-      btn.addEventListener('mouseleave', function () { track.classList.remove('paused'); });
+
+      if (canHover) {
+        btn.addEventListener('mouseenter', function () {
+          pinned = false;
+          open(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src), track);
+        });
+        btn.addEventListener('mouseleave', scheduleClose);
+
       btn.addEventListener('click', function () {
-        openAt(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src));
+        open(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src), track);
+        pinned = true;
       });
     });
   });
