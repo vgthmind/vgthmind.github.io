@@ -1,5 +1,11 @@
 document.addEventListener('DOMContentLoaded', function () {
   positionBleeds();
+  window.addEventListener('load', positionBleeds);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(positionBleeds);
+  }
+  setTimeout(positionBleeds, 300);
+  setTimeout(positionBleeds, 1000);
 
   var layers = document.querySelectorAll('.parallax-layer');
   if (!layers.length) return;
