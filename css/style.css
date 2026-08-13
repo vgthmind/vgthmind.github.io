@@ -380,6 +380,13 @@ main{flex:1;min-width:0;}
   filter:blur(46px) brightness(0.55) saturate(1.15);opacity:0.85;transform:scale(1.2);
   transition:opacity .32s ease;
 }
+/* The stage is the real "hover to stay open" zone — sized around the image
+   plus room for the arrows, not the full viewport, so moving the mouse off
+   the photo (onto the dark backdrop) closes it as readily as hovering opens it. */
+.lightbox-stage{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  width:min(94vw,1040px);height:88vh;max-height:88vh;
+}
 .lightbox-main{
   position:relative;max-width:min(88vw,880px);max-height:84vh;width:auto;height:auto;
   object-fit:contain;box-shadow:0 32px 90px rgba(0,0,0,0.55);z-index:2;
@@ -399,10 +406,10 @@ main{flex:1;min-width:0;}
   transition:background .15s ease;
 }
 .lightbox-close:hover,.lightbox-prev:hover,.lightbox-next:hover{background:rgba(255,255,255,0.24);}
-.lightbox-close{top:22px;right:24px;width:40px;height:40px;font-size:20px;}
+.lightbox-close{top:0;right:0;width:40px;height:40px;font-size:20px;}
 .lightbox-prev,.lightbox-next{top:50%;transform:translateY(-50%);width:46px;height:46px;font-size:20px;}
-.lightbox-prev{left:20px;}
-.lightbox-next{right:20px;}
+.lightbox-prev{left:0;}
+.lightbox-next{right:0;}
 
 /* Scroll-reveal: gentle fade + rise as sections enter the viewport */
 .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1);}

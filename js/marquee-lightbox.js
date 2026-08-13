@@ -2,6 +2,7 @@ function initMarqueeLightbox() {
   var lightbox = document.getElementById('lightbox');
   if (!lightbox) return;
 
+  var stage = lightbox.querySelector('.lightbox-stage');
   var bg = lightbox.querySelector('.lightbox-bg-blur');
   var main = lightbox.querySelector('.lightbox-main');
   var closeBtn = lightbox.querySelector('.lightbox-close');
@@ -53,7 +54,7 @@ function initMarqueeLightbox() {
     clearTimeout(openTimer);
     openTimer = setTimeout(function () {
       open(list, index, track);
-    }, 220);
+    }, 260);
   }
 
   function cancelScheduledOpen() {
@@ -64,7 +65,7 @@ function initMarqueeLightbox() {
     cancelScheduledOpen();
     if (pinned) return;
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(close, 110);
+    closeTimer = setTimeout(close, 160);
   }
 
   function cancelScheduledClose() {
@@ -92,8 +93,11 @@ function initMarqueeLightbox() {
   backdrop.addEventListener('click', close);
   nextBtn.addEventListener('click', next);
   prevBtn.addEventListener('click', prev);
-  lightbox.addEventListener('mouseenter', cancelScheduledClose);
-  lightbox.addEventListener('mouseleave', scheduleClose);
+  // Hover-tracking is scoped to the stage (image + arrows), not the full-screen
+  // lightbox wrapper — otherwise "leaving via mouse" would require leaving the
+  // whole browser window instead of just moving off the photo.
+  stage.addEventListener('mouseenter', cancelScheduledClose);
+  stage.addEventListener('mouseleave', scheduleClose);
 
   document.addEventListener('keydown', function (e) {
     if (!lightbox.classList.contains('open')) return;
