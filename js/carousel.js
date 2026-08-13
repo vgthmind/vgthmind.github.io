@@ -22,9 +22,20 @@ document.addEventListener('DOMContentLoaded', function () {
       track.scrollLeft = startScroll - dx;
     });
 
-    function release() {
+    function release(e) {
       isDown = false;
       track.classList.remove('grabbing');
+      // setPointerCapture (needed so a drag keeps tracking outside the track's
+      // bounds) also retargets the native click that follows pointerup to the
+      // track itself, so it never reaches the tapped image's own click
+      // listener. For a genuine (non-drag) tap, fire a click on the actual
+      // element under the pointer so per-image listeners (lightbox open) work.
+      if (e && e.type === 'pointerup' && !moved) {
+        var real = document.elementFromPoint(e.clientX, e.clientY);
+        if (real && !real.closest('button')) {
+          real.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        }
+      }
     }
     track.addEventListener('pointerup', release);
     track.addEventListener('pointercancel', release);
