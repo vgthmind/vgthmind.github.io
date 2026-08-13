@@ -13,6 +13,7 @@ function initMarqueeLightbox() {
   var currentIndex = 0;
   var currentTrack = null;
   var closeTimer = null;
+  var openTimer = null;
   var pinned = false; // true once opened by click/tap: only closes via explicit close
 
   function isCutout(item) {
@@ -28,6 +29,7 @@ function initMarqueeLightbox() {
 
   function open(list, index, track) {
     clearTimeout(closeTimer);
+    clearTimeout(openTimer);
     currentList = list;
     currentIndex = index;
     currentTrack = track;
@@ -39,6 +41,7 @@ function initMarqueeLightbox() {
 
   function close() {
     clearTimeout(closeTimer);
+    clearTimeout(openTimer);
     lightbox.classList.remove('open');
     document.body.style.overflow = '';
     if (currentTrack) currentTrack.classList.remove('paused');
@@ -46,10 +49,22 @@ function initMarqueeLightbox() {
     pinned = false;
   }
 
+  function scheduleOpen(list, index, track) {
+    clearTimeout(openTimer);
+    openTimer = setTimeout(function () {
+      open(list, index, track);
+    }, 220);
+  }
+
+  function cancelScheduledOpen() {
+    clearTimeout(openTimer);
+  }
+
   function scheduleClose() {
+    cancelScheduledOpen();
     if (pinned) return;
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(close, 180);
+    closeTimer = setTimeout(close, 110);
   }
 
   function cancelScheduledClose() {
@@ -106,12 +121,13 @@ function initMarqueeLightbox() {
       if (canHover) {
         btn.addEventListener('mouseenter', function () {
           pinned = false;
-          open(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
+          scheduleOpen(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
         });
         btn.addEventListener('mouseleave', scheduleClose);
       }
 
       btn.addEventListener('click', function () {
+        cancelScheduledOpen();
         open(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
         pinned = true;
       });
