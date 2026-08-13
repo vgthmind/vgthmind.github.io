@@ -323,7 +323,11 @@ main{flex:1;min-width:0;}
 }
 
 /* Single-frame carousel: one photo at a time, matches the size of a regular grid frame */
-.carousel-frame{position:relative;}
+/* Sacoches are near-square cutouts (0.74-1.02 ratio) — the shared .tall 3/4
+   portrait box (borrowed from its full-bleed-photo siblings) left them
+   floating small with dead space top/bottom no matter the padding/background.
+   Give this one card its own closer-fitting ratio instead. */
+.carousel-frame{position:relative;aspect-ratio:6/7;}
 .carousel-frame .carousel-track{
   display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;
   -webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0;padding:0;gap:0;
@@ -334,7 +338,7 @@ main{flex:1;min-width:0;}
 .carousel-frame .carousel-item.contain{
   background:radial-gradient(ellipse at 50% 45%,#fbfbf9 0%,#eeeeea 62%,#dfdfda 100%);
 }
-.carousel-frame .carousel-item.contain img{object-fit:contain;padding:14px;box-sizing:border-box;}
+.carousel-frame .carousel-item.contain img{object-fit:contain;padding:8px;box-sizing:border-box;}
 .carousel-frame .carousel-arrow{
   position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;
   background:rgba(21,23,26,0.5);color:#fff;display:flex;align-items:center;justify-content:center;
