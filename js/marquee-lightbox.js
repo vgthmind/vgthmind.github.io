@@ -31,6 +31,7 @@ function initMarqueeLightbox() {
   function open(list, index, track) {
     clearTimeout(closeTimer);
     clearTimeout(openTimer);
+    lightbox.classList.remove('closing');
     currentList = list;
     currentIndex = index;
     currentTrack = track;
@@ -43,6 +44,7 @@ function initMarqueeLightbox() {
   function close() {
     clearTimeout(closeTimer);
     clearTimeout(openTimer);
+    lightbox.classList.add('closing');
     lightbox.classList.remove('open');
     document.body.style.overflow = '';
     if (currentTrack) currentTrack.classList.remove('paused');
@@ -54,7 +56,7 @@ function initMarqueeLightbox() {
     clearTimeout(openTimer);
     openTimer = setTimeout(function () {
       open(list, index, track);
-    }, 260);
+    }, 420);
   }
 
   function cancelScheduledOpen() {
@@ -65,7 +67,7 @@ function initMarqueeLightbox() {
     cancelScheduledOpen();
     if (pinned) return;
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(close, 160);
+    closeTimer = setTimeout(close, 130);
   }
 
   function cancelScheduledClose() {
