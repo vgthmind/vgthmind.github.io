@@ -15,10 +15,15 @@ function initMarqueeLightbox() {
   var closeTimer = null;
   var pinned = false; // true once opened by click/tap: only closes via explicit close
 
+  function isCutout(item) {
+    return item.contain && /\.png($|\?)/i.test(item.src);
+  }
+
   function showCurrent() {
-    var src = currentList[currentIndex];
-    main.src = src;
-    bg.src = src;
+    var item = currentList[currentIndex];
+    main.src = item.src;
+    bg.src = item.src;
+    lightbox.classList.toggle('cutout-mode', isCutout(item));
   }
 
   function open(list, index, track) {
@@ -61,6 +66,13 @@ function initMarqueeLightbox() {
     showCurrent();
   }
 
+  function indexOfSrc(list, src) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].src === src) return i;
+    }
+    return -1;
+  }
+
   closeBtn.addEventListener('click', close);
   backdrop.addEventListener('click', close);
   nextBtn.addEventListener('click', next);
@@ -79,12 +91,12 @@ function initMarqueeLightbox() {
 
   document.querySelectorAll('.marquee-wrap').forEach(function (wrap) {
     var seen = {};
-    var uniqueSrcs = [];
+    var uniqueItems = [];
     wrap.querySelectorAll('.marquee-item').forEach(function (btn) {
       var src = btn.dataset.src;
       if (!seen[src]) {
         seen[src] = true;
-        uniqueSrcs.push(src);
+        uniqueItems.push({ src: src, contain: btn.classList.contains('contain') });
       }
     });
 
@@ -94,13 +106,13 @@ function initMarqueeLightbox() {
       if (canHover) {
         btn.addEventListener('mouseenter', function () {
           pinned = false;
-          open(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src), track);
+          open(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
         });
         btn.addEventListener('mouseleave', scheduleClose);
       }
 
       btn.addEventListener('click', function () {
-        open(uniqueSrcs, uniqueSrcs.indexOf(btn.dataset.src), track);
+        open(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
         pinned = true;
       });
     });

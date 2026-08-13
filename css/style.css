@@ -377,6 +377,13 @@ main{flex:1;min-width:0;}
   opacity:0;transform:scale(0.97);transition:opacity .25s ease,transform .25s ease;
 }
 .lightbox.open .lightbox-main{opacity:1;transform:scale(1);}
+/* Cutout mode: transparent PNGs (armes, sacoches, sac à dos, CD...) get a soft
+   presentation card instead of a blur of their own (mostly empty) alpha channel. */
+.lightbox.cutout-mode .lightbox-bg-blur{opacity:0;}
+.lightbox.cutout-mode .lightbox-main{
+  background:radial-gradient(ellipse at 50% 42%,#fbfbf9 0%,#eeeeea 62%,#dfdfda 100%);
+  padding:clamp(28px,6vw,72px);border-radius:20px;box-sizing:border-box;
+}
 .lightbox-close,.lightbox-prev,.lightbox-next{
   position:absolute;z-index:3;border:none;border-radius:50%;background:rgba(255,255,255,0.12);color:#fff;
   display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);
