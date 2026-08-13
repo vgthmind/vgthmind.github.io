@@ -400,11 +400,15 @@ main{flex:1;min-width:0;}
 }
 .lightbox.open .lightbox-main{opacity:1;transform:scale(1);}
 .lightbox.closing .lightbox-main{transition:opacity .16s ease,transform .16s ease;}
-/* Cutout mode: transparent PNGs (armes, sacoches, sac à dos, CD...) — blurring
-   their own (mostly empty) alpha channel doesn't do anything useful, so just
-   skip that layer and let the piece float on the dark backdrop, grounded by
-   its own drop-shadow rather than a visible card behind it. */
+/* Cutout mode: transparent PNGs (armes, sacoches, sac à dos, CD, pièces
+   aéro...) get a soft presentation card once zoomed — blurring their own
+   (mostly empty) alpha channel doesn't do anything useful. Only applies in
+   the lightbox: inline in the scrolling rows these stay fully transparent. */
 .lightbox.cutout-mode .lightbox-bg-blur{opacity:0;}
+.lightbox.cutout-mode .lightbox-main{
+  background:radial-gradient(ellipse at 50% 42%,#fbfbf9 0%,#eeeeea 62%,#dfdfda 100%);
+  padding:clamp(28px,6vw,72px);border-radius:20px;box-sizing:border-box;
+}
 .lightbox-close,.lightbox-prev,.lightbox-next{
   position:absolute;z-index:3;border:none;border-radius:50%;background:rgba(255,255,255,0.12);color:#fff;
   display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);

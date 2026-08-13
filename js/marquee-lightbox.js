@@ -15,7 +15,6 @@ function initMarqueeLightbox() {
   var currentTrack = null;
   var closeTimer = null;
   var openTimer = null;
-  var pinned = false; // true once opened by click/tap: only closes via explicit close
 
   function isCutout(item) {
     return item.contain && /\.png($|\?)/i.test(item.src);
@@ -49,7 +48,6 @@ function initMarqueeLightbox() {
     document.body.style.overflow = '';
     if (currentTrack) currentTrack.classList.remove('paused');
     currentTrack = null;
-    pinned = false;
   }
 
   function scheduleOpen(list, index, track) {
@@ -65,7 +63,6 @@ function initMarqueeLightbox() {
 
   function scheduleClose() {
     cancelScheduledOpen();
-    if (pinned) return;
     clearTimeout(closeTimer);
     closeTimer = setTimeout(close, 130);
   }
@@ -130,7 +127,6 @@ function initMarqueeLightbox() {
 
       if (canHover && hoverEnabled) {
         el.addEventListener('mouseenter', function () {
-          pinned = false;
           scheduleOpen(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
         });
         el.addEventListener('mouseleave', scheduleClose);
@@ -139,10 +135,12 @@ function initMarqueeLightbox() {
         el.addEventListener('pointerdown', cancelScheduledOpen);
       }
 
+      // Click opens instantly (skips the hover-intent delay). It behaves just
+      // like hover otherwise — moving the mouse away still closes it, so the
+      // interaction stays consistent whichever way it was opened.
       el.addEventListener('click', function () {
         cancelScheduledOpen();
         open(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
-        pinned = true;
       });
     });
   }
