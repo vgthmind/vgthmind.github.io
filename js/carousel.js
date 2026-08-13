@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
     track.addEventListener('pointermove', function (e) {
       if (!isDown) return;
       var dx = e.clientX - startX;
-      if (Math.abs(dx) > 3) moved = true;
+      if (Math.abs(dx) > 8) moved = true;
       track.scrollLeft = startScroll - dx;
     });
 
