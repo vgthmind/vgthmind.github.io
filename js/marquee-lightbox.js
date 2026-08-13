@@ -132,6 +132,9 @@ function initMarqueeLightbox() {
           scheduleOpen(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
         });
         el.addEventListener('mouseleave', scheduleClose);
+        // A press-and-drag (e.g. swiping the sacoches carousel) shouldn't get
+        // interrupted by the hover-preview opening mid-gesture.
+        el.addEventListener('pointerdown', cancelScheduledOpen);
       }
 
       el.addEventListener('click', function () {
@@ -159,12 +162,14 @@ function initMarqueeLightbox() {
     wireGroup(imgs, function (im) { return im.getAttribute('src'); }, function () { return false; }, null, true);
   });
 
-  // Sacoches (and any future single-frame product carousel): click to zoom,
-  // cycling through that carousel's own items.
+  // Sacoches (and any future single-frame product carousel): same hover-to-zoom
+  // behavior as everywhere else on the site, cycling through that carousel's
+  // own items. pointerdown cancels the hover-open so swiping between photos
+  // isn't interrupted by a zoom popping open mid-drag.
   document.querySelectorAll('.carousel-frame').forEach(function (frame) {
     var imgs = frame.querySelectorAll('.carousel-item img');
     if (!imgs.length) return;
-    wireGroup(imgs, function (im) { return im.getAttribute('src'); }, function (im) { return im.closest('.carousel-item').classList.contains('contain'); }, null, false);
+    wireGroup(imgs, function (im) { return im.getAttribute('src'); }, function (im) { return im.closest('.carousel-item').classList.contains('contain'); }, null, true);
   });
 }
 
