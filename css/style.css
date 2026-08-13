@@ -218,6 +218,8 @@ main{flex:1;min-width:0;}
 .g-7{grid-column:span 7;}
 .grid figure{margin:0;position:relative;overflow:hidden;background:var(--bg-raise);}
 .grid img,.grid video{width:100%;height:100%;object-fit:cover;display:block;background:var(--bg-raise);}
+.zoomable-photo{cursor:pointer;transition:transform .4s ease;}
+.zoomable-photo:hover{transform:scale(1.035);}
 .grid figcaption{
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--steel);
   padding-top:8px;letter-spacing:0.01em;
@@ -327,9 +329,12 @@ main{flex:1;min-width:0;}
   -webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0;padding:0;gap:0;
 }
 .carousel-frame .carousel-track::-webkit-scrollbar{display:none;}
-.carousel-frame .carousel-item{flex:0 0 100%;width:100%;max-width:none;height:100%;scroll-snap-align:start;margin:0;}
+.carousel-frame .carousel-item{flex:0 0 100%;width:100%;max-width:none;height:100%;scroll-snap-align:start;margin:0;cursor:pointer;}
 .carousel-frame .carousel-item img{width:100%;height:100%;object-fit:cover;display:block;}
-.carousel-frame .carousel-item.contain img{object-fit:contain;padding:22px;box-sizing:border-box;}
+.carousel-frame .carousel-item.contain{
+  background:radial-gradient(ellipse at 50% 45%,#fbfbf9 0%,#eeeeea 62%,#dfdfda 100%);
+}
+.carousel-frame .carousel-item.contain img{object-fit:contain;padding:14px;box-sizing:border-box;}
 .carousel-frame .carousel-arrow{
   position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;
   background:rgba(21,23,26,0.5);color:#fff;display:flex;align-items:center;justify-content:center;

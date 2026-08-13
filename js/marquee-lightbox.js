@@ -104,34 +104,63 @@ function initMarqueeLightbox() {
 
   var canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
-  document.querySelectorAll('.marquee-wrap').forEach(function (wrap) {
+  // Wires a group of trigger elements to the lightbox, sharing one prev/next list
+  // built from all of them (deduped by src). getSrc/getContain read each trigger;
+  // getTrack (optional) resolves the marquee-track to pause while that trigger is open.
+  // hoverEnabled controls whether desktop hover-intent opens it too (vs. click/tap only).
+  function wireGroup(triggers, getSrc, getContain, getTrack, hoverEnabled) {
     var seen = {};
     var uniqueItems = [];
-    wrap.querySelectorAll('.marquee-item').forEach(function (btn) {
-      var src = btn.dataset.src;
+    triggers.forEach(function (el) {
+      var src = getSrc(el);
       if (!seen[src]) {
         seen[src] = true;
-        uniqueItems.push({ src: src, contain: btn.classList.contains('contain') });
+        uniqueItems.push({ src: src, contain: getContain(el) });
       }
     });
 
-    wrap.querySelectorAll('.marquee-item').forEach(function (btn) {
-      var track = btn.closest('.marquee-track');
+    triggers.forEach(function (el) {
+      var track = getTrack ? getTrack(el) : null;
 
-      if (canHover) {
-        btn.addEventListener('mouseenter', function () {
+      if (canHover && hoverEnabled) {
+        el.addEventListener('mouseenter', function () {
           pinned = false;
-          scheduleOpen(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
+          scheduleOpen(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
         });
-        btn.addEventListener('mouseleave', scheduleClose);
+        el.addEventListener('mouseleave', scheduleClose);
       }
 
-      btn.addEventListener('click', function () {
+      el.addEventListener('click', function () {
         cancelScheduledOpen();
-        open(uniqueItems, indexOfSrc(uniqueItems, btn.dataset.src), track);
+        open(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
         pinned = true;
       });
     });
+  }
+
+  var byDataSrc = function (el) { return el.dataset.src; };
+  var byContainClass = function (el) { return el.classList.contains('contain'); };
+
+  document.querySelectorAll('.marquee-wrap').forEach(function (wrap) {
+    var triggers = wrap.querySelectorAll('.marquee-item');
+    wireGroup(triggers, byDataSrc, byContainClass, function (el) { return el.closest('.marquee-track'); }, true);
+  });
+
+  // Every photo in a content grid: click (and hover on desktop) to zoom in,
+  // with prev/next cycling through the other photos of that same grid.
+  document.querySelectorAll('.grid').forEach(function (grid) {
+    var imgs = grid.querySelectorAll(':scope > figure > img');
+    if (!imgs.length) return;
+    imgs.forEach(function (img) { img.classList.add('zoomable-photo'); });
+    wireGroup(imgs, function (im) { return im.getAttribute('src'); }, function () { return false; }, null, true);
+  });
+
+  // Sacoches (and any future single-frame product carousel): click to zoom,
+  // cycling through that carousel's own items.
+  document.querySelectorAll('.carousel-frame').forEach(function (frame) {
+    var imgs = frame.querySelectorAll('.carousel-item img');
+    if (!imgs.length) return;
+    wireGroup(imgs, function (im) { return im.getAttribute('src'); }, function (im) { return im.closest('.carousel-item').classList.contains('contain'); }, null, false);
   });
 }
 
