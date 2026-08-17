@@ -172,6 +172,12 @@ main{flex:1;min-width:0;}
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink);
   text-align:right;line-height:1.6;letter-spacing:0.02em;
 }
+.cover-skills{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
+.cover-skills span{
+  font-size:10.5px;letter-spacing:0.03em;color:var(--steel);
+  padding:5px 11px;border:1px solid var(--line);border-radius:20px;
+  background:rgba(255,255,255,0.4);
+}
 .cover-contact{
   margin-top:24px;display:flex;gap:20px;flex-wrap:wrap;
   font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--steel);
@@ -470,6 +476,14 @@ main{flex:1;min-width:0;}
 .logo-burst img.lb-logo{width:130px;height:auto;position:relative;z-index:3;filter:drop-shadow(0 0 18px rgba(0,0,0,0.15));}
 .logo-burst .ray{position:absolute;left:50%;top:50%;background:linear-gradient(90deg,var(--chapter-accent,var(--blue)),transparent);height:2px;transform-origin:0 50%;opacity:0.4;}
 
+.chapter-next{
+  display:inline-block;margin-top:64px;font-size:11px;letter-spacing:0.04em;
+  text-transform:uppercase;color:var(--steel);text-decoration:none;
+  padding-bottom:4px;border-bottom:1px solid var(--line);
+  transition:color .15s ease,border-color .15s ease;
+}
+.chapter-next:hover{color:var(--ink);border-color:var(--chapter-accent,var(--blue));}
+
 footer.contact{
   padding:96px 64px 80px;max-width:var(--maxw);margin:0 auto;
 }
@@ -538,6 +552,16 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
 @media (max-width:860px),(hover:none),(pointer:coarse){
   .cursor-dot,.cursor-ring{display:none;}
 }
+
+/* ---------- Nav hover preview: small floating photo next to the cursor
+   when hovering a chapter link in the sidebar ---------- */
+.nav-preview{
+  position:fixed;top:0;left:0;width:170px;height:226px;object-fit:cover;
+  border-radius:4px;box-shadow:0 18px 40px rgba(21,23,26,0.28);
+  pointer-events:none;z-index:200;opacity:0;transition:opacity .25s ease;
+  will-change:transform;background:var(--bg-raise);
+}
+.nav-preview.visible{opacity:1;}
 
 /* ---------- Back to top ---------- */
 .back-to-top{

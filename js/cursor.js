@@ -40,13 +40,19 @@
 
   var hoverSelector = 'a, button, .zoomable-photo, .marquee-item, .carousel-item, .carousel-btn, .carousel-arrow, .carousel-dot, .clip-tab, .mnav-toggle';
 
+  // Chapter nav links get their own photo preview (js/nav-preview.js) instead —
+  // showing the logo stamp there too would compete with it for attention.
+  var navLinksSelector = '.rail-chapters a, .mnav-panel a';
+
   document.addEventListener('mouseover', function (e) {
+    if (e.target.closest(navLinksSelector)) return;
     if (e.target.closest(hoverSelector)) {
       dot.classList.add('hover');
       ring.classList.add('hover');
     }
   });
   document.addEventListener('mouseout', function (e) {
+    if (e.target.closest(navLinksSelector)) return;
     if (e.target.closest(hoverSelector)) {
       dot.classList.remove('hover');
       ring.classList.remove('hover');
