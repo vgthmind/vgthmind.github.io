@@ -579,7 +579,7 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
    two-layer clip+track loop technique as .marquee-row/.marquee-track. */
 .nav-preview-row{width:100%;height:56px;overflow:hidden;border-top:1px solid rgba(255,255,255,0.5);}
 .nav-preview-row-track{display:flex;gap:2px;width:max-content;height:100%;animation:nav-preview-row-scroll 10s linear infinite;}
-.nav-preview-row-track img{flex:0 0 auto;width:56px;height:56px;object-fit:cover;display:block;background:var(--bg-raise);}
+.nav-preview-row-track img{flex:0 0 auto;width:56px;height:56px;object-fit:contain;display:block;background:var(--bg-raise);}
 @keyframes nav-preview-row-scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 
 /* ---------- Back to top ---------- */
