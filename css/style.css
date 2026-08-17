@@ -119,7 +119,9 @@ main{flex:1;min-width:0;}
     font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.02em;
     color:var(--steel);text-decoration:none;
     padding:10px 0;border-left:2px solid transparent;padding-left:12px;
+    transition:color .15s ease,border-color .15s ease;
   }
+  .mnav-panel a.active{color:var(--ink);border-left-color:var(--blue);}
   .mnav-panel a .era{
     display:block;font-family:'Space Grotesk',sans-serif;
     font-size:14px;font-weight:500;color:var(--ink);margin-top:2px;
@@ -522,7 +524,10 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
     background .32s ease,border-color .32s ease,box-shadow .32s ease;
 }
 .cursor-ring.hover{
-  width:68px;height:68px;border-color:transparent;background:var(--bg-raise);
+  width:68px;height:68px;border-color:rgba(255,255,255,0.4);
+  background:rgba(255,255,255,0.1);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);
+  backdrop-filter:blur(14px) saturate(1.3);
   box-shadow:0 10px 28px rgba(21,23,26,0.16);
 }
 .cursor-ring-logo{
@@ -532,4 +537,26 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
 .cursor-ring.hover .cursor-ring-logo{width:38px;opacity:1;}
 @media (max-width:860px),(hover:none),(pointer:coarse){
   .cursor-dot,.cursor-ring{display:none;}
+}
+
+/* ---------- Back to top ---------- */
+.back-to-top{
+  position:fixed;right:24px;bottom:24px;z-index:120;
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--line);
+  background:var(--bg-raise);color:var(--ink);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
+  opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:opacity .25s ease,transform .25s ease,visibility 0s linear .25s,border-color .15s ease;
+  box-shadow:0 4px 16px rgba(21,23,26,0.1);
+}
+.back-to-top.visible{
+  opacity:1;visibility:visible;transform:translateY(0);
+  transition:opacity .25s ease,transform .25s ease,visibility 0s linear 0s;
+}
+.back-to-top:hover{border-color:var(--chapter-accent,var(--blue));}
+@media (max-width:860px){
+  .back-to-top{right:16px;bottom:16px;width:40px;height:40px;font-size:15px;}
+}
+@media (prefers-reduced-motion:reduce){
+  .back-to-top{transition:opacity .15s ease,visibility 0s linear;}
 }
