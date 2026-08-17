@@ -556,12 +556,22 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
 /* ---------- Nav hover preview: small floating photo next to the cursor
    when hovering a chapter link in the sidebar ---------- */
 .nav-preview{
-  position:fixed;top:0;left:0;width:170px;height:226px;object-fit:cover;
+  position:fixed;top:0;left:0;width:170px;height:226px;overflow:hidden;
   border-radius:4px;box-shadow:0 18px 40px rgba(21,23,26,0.28);
   pointer-events:none;z-index:200;opacity:0;transition:opacity .25s ease;
   will-change:transform;background:var(--bg-raise);
 }
 .nav-preview.visible{opacity:1;}
+.nav-preview-strip{position:absolute;top:0;left:0;width:100%;height:auto;display:block;}
+.nav-preview.scrolling .nav-preview-strip{
+  animation-name:nav-preview-scroll;animation-timing-function:linear;
+  animation-iteration-count:infinite;animation-direction:alternate;
+  animation-duration:var(--scroll-duration,14s);
+}
+@keyframes nav-preview-scroll{
+  0%,15%{transform:translateY(0);}
+  85%,100%{transform:translateY(var(--scroll-distance,0px));}
+}
 
 /* ---------- Back to top ---------- */
 .back-to-top{
