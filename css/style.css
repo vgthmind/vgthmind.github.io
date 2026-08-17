@@ -564,13 +564,13 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
 .nav-preview.visible{opacity:1;}
 .nav-preview-strip{position:absolute;top:0;left:0;width:100%;height:auto;display:block;}
 .nav-preview.scrolling .nav-preview-strip{
-  animation-name:nav-preview-scroll;animation-timing-function:linear;
-  animation-iteration-count:infinite;animation-direction:alternate;
-  animation-duration:var(--scroll-duration,14s);
+  animation-name:nav-preview-scroll;animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite;animation-direction:normal;
+  animation-duration:var(--scroll-duration,8s);
 }
 @keyframes nav-preview-scroll{
-  0%,15%{transform:translateY(0);}
-  85%,100%{transform:translateY(var(--scroll-distance,0px));}
+  0%,5%{transform:translateY(0);}
+  92%,100%{transform:translateY(var(--scroll-distance,0px));}
 }
 
 /* ---------- Back to top ---------- */

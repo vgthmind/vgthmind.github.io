@@ -22,7 +22,7 @@
   wrap.appendChild(img);
   document.body.appendChild(wrap);
 
-  var PX_PER_SEC = 26;
+  var SCROLL_DURATION = 8; // seconds for a full pass, regardless of chapter length — feels like a quick real scroll, not a slideshow
   var mouseX = 0, mouseY = 0, visible = false;
 
   function position() {
@@ -48,7 +48,7 @@
       return;
     }
     wrap.style.setProperty('--scroll-distance', '-' + distance + 'px');
-    wrap.style.setProperty('--scroll-duration', (distance / PX_PER_SEC) + 's');
+    wrap.style.setProperty('--scroll-duration', SCROLL_DURATION + 's');
     wrap.classList.add('scrolling');
   }
 
