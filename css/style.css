@@ -490,3 +490,46 @@ footer.contact .links a{text-decoration:none;border-bottom:1px solid var(--line)
   .vid-portrait{max-height:70vh;}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}}
+
+/* ---------- Reading progress bar ---------- */
+.progress-bar{
+  position:fixed;top:0;left:0;height:3px;width:0%;z-index:150;
+  background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .12s linear;
+}
+@media (prefers-reduced-motion:reduce){.progress-bar{transition:none;}}
+
+/* ---------- Custom cursor: small dot + lagging ring, with the brand mark
+   fading into the ring over anything clickable. Desktop (fine pointer +
+   hover capability) only — JS adds .has-custom-cursor, so a script failure
+   or touch device silently keeps the native cursor. ---------- */
+html.has-custom-cursor,html.has-custom-cursor *{cursor:none !important;}
+.cursor-dot,.cursor-ring{
+  position:fixed;top:0;left:0;pointer-events:none;z-index:400;
+  opacity:0;will-change:transform;
+}
+html.has-custom-cursor.cursor-active .cursor-dot,
+html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
+.cursor-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--ink);
+  transition:opacity .2s ease,width .25s cubic-bezier(.2,.7,.2,1),height .25s cubic-bezier(.2,.7,.2,1);
+}
+.cursor-dot.hover{width:0;height:0;}
+.cursor-ring{
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(21,23,26,0.55);
+  display:flex;align-items:center;justify-content:center;background:transparent;
+  transition:opacity .2s ease,width .32s cubic-bezier(.2,.7,.2,1),height .32s cubic-bezier(.2,.7,.2,1),
+    background .32s ease,border-color .32s ease,box-shadow .32s ease;
+}
+.cursor-ring.hover{
+  width:68px;height:68px;border-color:transparent;background:var(--bg-raise);
+  box-shadow:0 10px 28px rgba(21,23,26,0.16);
+}
+.cursor-ring-logo{
+  width:0;opacity:0;object-fit:contain;
+  transition:width .3s cubic-bezier(.2,.7,.2,1),opacity .25s ease;
+}
+.cursor-ring.hover .cursor-ring-logo{width:38px;opacity:1;}
+@media (max-width:860px),(hover:none),(pointer:coarse){
+  .cursor-dot,.cursor-ring{display:none;}
+}
