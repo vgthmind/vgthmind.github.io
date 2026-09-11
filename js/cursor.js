@@ -40,8 +40,7 @@
 
   var hoverSelector = 'a, button, .zoomable-photo, .marquee-item, .carousel-item, .carousel-btn, .carousel-arrow, .carousel-dot, .clip-tab, .mnav-toggle';
 
-  // Chapter nav links get their own photo preview (js/nav-preview.js) instead —
-  // showing the logo stamp there too would compete with it for attention.
+  // nav links use their own preview (nav-preview.js), not this cursor
   var navLinksSelector = '.rail-chapters a, .mnav-panel a';
 
   document.addEventListener('mouseover', function (e) {

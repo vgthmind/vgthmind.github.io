@@ -11,7 +11,7 @@
     '#ch-petites': 'assets/navpreview/ch-petites.jpg'
   };
 
-  // The horizontal filmstrip mirrors each chapter's own marquee/carousel content.
+  // filmstrip = same photos as the chapter's own marquee/carousel
   var rows = {
     '#ch-2022': ['assets/ch1b/dinan1.jpg', 'assets/ch1b/paris1.jpg', 'assets/ch1b/clipstill.jpg', 'assets/ch1b/paris3.jpg', 'assets/ch1b/dinan2.jpg', 'assets/ch1b/paris2.jpg', 'assets/ch1b/lineup.jpg', 'assets/ch1b/paris_group.jpg'],
     '#ch-2023': ['assets/vgthm23/greenscreen.jpg', 'assets/vgthm23/pv1.jpg', 'assets/vgthm23/pv2.jpg', 'assets/vgthm23/pv3.jpg', 'assets/vgthm23/pv4.jpg', 'assets/vgthm23/odm1.jpg', 'assets/vgthm23/chap2part2_1.jpg', 'assets/vgthm23/vgth_graphic.jpg'],
@@ -24,8 +24,7 @@
   var links = document.querySelectorAll('.rail-chapters a');
   if (!links.length) return;
 
-  // Warm the browser cache for every strip up front, so the first hover on
-  // each chapter doesn't wait on a network fetch before it can start scrolling.
+  // preload everything so the first hover doesn't wait on a fetch
   Object.keys(previews).forEach(function (k) { new Image().src = previews[k]; });
   Object.keys(rows).forEach(function (k) { rows[k].forEach(function (src) { new Image().src = src; }); });
 

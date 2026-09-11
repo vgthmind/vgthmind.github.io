@@ -1,4 +1,11 @@
-.claude/
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# editor / local tooling
+.vscode/
+.idea/
+.claude/
 *.bak
+*.tmp

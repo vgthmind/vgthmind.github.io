@@ -92,9 +92,7 @@ function initMarqueeLightbox() {
   backdrop.addEventListener('click', close);
   nextBtn.addEventListener('click', next);
   prevBtn.addEventListener('click', prev);
-  // Hover-tracking is scoped to the stage (image + arrows), not the full-screen
-  // lightbox wrapper — otherwise "leaving via mouse" would require leaving the
-  // whole browser window instead of just moving off the photo.
+  // scoped to the stage so leaving the photo closes it, not leaving the window
   stage.addEventListener('mouseenter', cancelScheduledClose);
   stage.addEventListener('mouseleave', scheduleClose);
 
@@ -107,10 +105,7 @@ function initMarqueeLightbox() {
 
   var canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
 
-  // Wires a group of trigger elements to the lightbox, sharing one prev/next list
-  // built from all of them (deduped by src). getSrc/getContain read each trigger;
-  // getTrack (optional) resolves the marquee-track to pause while that trigger is open.
-  // hoverEnabled controls whether desktop hover-intent opens it too (vs. click/tap only).
+  // wires triggers to a shared prev/next list (deduped by src)
   function wireGroup(triggers, getSrc, getContain, getTrack, hoverEnabled) {
     var seen = {};
     var uniqueItems = [];
@@ -130,14 +125,11 @@ function initMarqueeLightbox() {
           scheduleOpen(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
         });
         el.addEventListener('mouseleave', scheduleClose);
-        // A press-and-drag (e.g. swiping the sacoches carousel) shouldn't get
-        // interrupted by the hover-preview opening mid-gesture.
+        // don't let a drag/swipe trigger the hover-preview
         el.addEventListener('pointerdown', cancelScheduledOpen);
       }
 
-      // Click opens instantly (skips the hover-intent delay). It behaves just
-      // like hover otherwise — moving the mouse away still closes it, so the
-      // interaction stays consistent whichever way it was opened.
+      // click opens instantly, skipping the hover-intent delay
       el.addEventListener('click', function () {
         cancelScheduledOpen();
         open(uniqueItems, indexOfSrc(uniqueItems, getSrc(el)), track);
@@ -153,8 +145,7 @@ function initMarqueeLightbox() {
     wireGroup(triggers, byDataSrc, byContainClass, function (el) { return el.closest('.marquee-track'); }, true);
   });
 
-  // Every photo in a content grid: click (and hover on desktop) to zoom in,
-  // with prev/next cycling through the other photos of that same grid.
+  // grid photos: click/hover to zoom, prev/next cycles the grid
   document.querySelectorAll('.grid').forEach(function (grid) {
     var imgs = grid.querySelectorAll(':scope > figure > img');
     if (!imgs.length) return;
@@ -162,10 +153,7 @@ function initMarqueeLightbox() {
     wireGroup(imgs, function (im) { return im.getAttribute('src'); }, function () { return false; }, null, true);
   });
 
-  // Sacoches (and any future single-frame product carousel): same hover-to-zoom
-  // behavior as everywhere else on the site, cycling through that carousel's
-  // own items. pointerdown cancels the hover-open so swiping between photos
-  // isn't interrupted by a zoom popping open mid-drag.
+  // single-frame carousels (sacoches etc.): same hover-to-zoom behavior
   document.querySelectorAll('.carousel-frame').forEach(function (frame) {
     var imgs = frame.querySelectorAll('.carousel-item img');
     if (!imgs.length) return;

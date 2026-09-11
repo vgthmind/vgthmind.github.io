@@ -331,10 +331,7 @@ main{flex:1;min-width:0;}
 }
 
 /* Single-frame carousel: one photo at a time, matches the size of a regular grid frame */
-/* Sacoches are near-square cutouts (0.74-1.02 ratio) — the shared .tall 3/4
-   portrait box (borrowed from its full-bleed-photo siblings) left them
-   floating small with dead space top/bottom no matter the padding/background.
-   Give this one card its own closer-fitting ratio instead. */
+/* sacoches are near-square (0.74-1.02), closer ratio than the default .tall box */
 .carousel-frame{position:relative;aspect-ratio:6/7;}
 .carousel-frame .carousel-track{
   display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;
@@ -395,9 +392,7 @@ main{flex:1;min-width:0;}
   filter:blur(46px) brightness(0.55) saturate(1.15);opacity:0.85;transform:scale(1.2);
   transition:opacity .32s ease;
 }
-/* The stage is the real "hover to stay open" zone — sized around the image
-   plus room for the arrows, not the full viewport, so moving the mouse off
-   the photo (onto the dark backdrop) closes it as readily as hovering opens it. */
+/* stage = hover zone (image + arrows), not the full viewport */
 .lightbox-stage{
   position:relative;display:flex;align-items:center;justify-content:center;
   width:min(94vw,1040px);height:88vh;max-height:88vh;
@@ -409,10 +404,7 @@ main{flex:1;min-width:0;}
 }
 .lightbox.open .lightbox-main{opacity:1;transform:scale(1);}
 .lightbox.closing .lightbox-main{transition:opacity .16s ease,transform .16s ease;}
-/* Cutout mode: transparent PNGs (armes, sacoches, sac à dos, CD, pièces
-   aéro...) get a soft presentation card once zoomed — blurring their own
-   (mostly empty) alpha channel doesn't do anything useful. Only applies in
-   the lightbox: inline in the scrolling rows these stay fully transparent. */
+/* cutout mode: transparent PNGs get a card backdrop once zoomed, lightbox only */
 .lightbox.cutout-mode .lightbox-bg-blur{opacity:0;}
 .lightbox.cutout-mode .lightbox-main{
   background:radial-gradient(ellipse at 50% 42%,#fbfbf9 0%,#eeeeea 62%,#dfdfda 100%);
@@ -498,6 +490,19 @@ footer.contact .links a{text-decoration:none;border-bottom:1px solid var(--line)
   .rail-chapters{margin-top:0;flex-direction:row;gap:16px;}
   .chapter{padding:56px 22px 20px;}
   .cover{padding:32px 22px;min-height:70vh;}
+  .cover-scrim{
+    background:linear-gradient(180deg, rgba(237,238,236,0.6) 0%, rgba(237,238,236,0.88) 30%, rgba(237,238,236,0.98) 65%);
+  }
+  .cover-tag{
+    position:relative;top:auto;right:auto;
+    text-align:left;margin-bottom:16px;
+    text-shadow:0 1px 14px rgba(237,238,236,0.95),0 0 3px rgba(237,238,236,0.9);
+  }
+  .cover-content h1,
+  .cover-content .role,
+  .cover-content p.pitch{
+    text-shadow:0 2px 18px rgba(237,238,236,0.85),0 0 4px rgba(237,238,236,0.7);
+  }
   footer.contact{padding:56px 22px;}
   .g-8,.g-6,.g-5,.g-7,.g-4{grid-column:span 12;}
   .frag,.deco{display:none;}
@@ -515,10 +520,7 @@ footer.contact .links a{text-decoration:none;border-bottom:1px solid var(--line)
 }
 @media (prefers-reduced-motion:reduce){.progress-bar{transition:none;}}
 
-/* ---------- Custom cursor: small dot + lagging ring, with the brand mark
-   fading into the ring over anything clickable. Desktop (fine pointer +
-   hover capability) only — JS adds .has-custom-cursor, so a script failure
-   or touch device silently keeps the native cursor. ---------- */
+/* ---------- Custom cursor (desktop only) ---------- */
 html.has-custom-cursor,html.has-custom-cursor *{cursor:none !important;}
 .cursor-dot,.cursor-ring{
   position:fixed;top:0;left:0;pointer-events:none;z-index:400;
@@ -553,8 +555,7 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
   .cursor-dot,.cursor-ring{display:none;}
 }
 
-/* ---------- Nav hover preview: small floating photo next to the cursor
-   when hovering a chapter link in the sidebar ---------- */
+/* ---------- Nav hover preview ---------- */
 .nav-preview{
   position:fixed;top:0;left:0;width:170px;overflow:hidden;
   border-radius:4px;box-shadow:0 18px 40px rgba(21,23,26,0.28);
@@ -575,8 +576,7 @@ html.has-custom-cursor.cursor-active .cursor-ring{opacity:1;}
   95%,100%{transform:translateY(var(--scroll-distance,0px));}
 }
 
-/* Horizontal filmstrip, mirrors the chapter's own marquee/carousel — same
-   two-layer clip+track loop technique as .marquee-row/.marquee-track. */
+/* filmstrip: same clip+track loop technique as .marquee-row/.marquee-track */
 .nav-preview-row{width:100%;height:56px;overflow:hidden;border-top:1px solid rgba(255,255,255,0.5);}
 .nav-preview-row-track{display:flex;gap:2px;width:max-content;height:100%;animation:nav-preview-row-scroll 10s linear infinite;}
 .nav-preview-row-track img{flex:0 0 auto;width:56px;height:56px;object-fit:contain;display:block;background:var(--bg-raise);}
