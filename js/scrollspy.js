@@ -18,8 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
     linksByHash[hash].forEach(function (a) { a.classList.add('active'); });
   }
 
-  // Trigger band is a thin horizontal strip a bit above viewport center —
-  // whichever section is crossing it is "the one you're reading".
+  // trigger band sits a bit above viewport center
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (entry.isIntersecting) setActive('#' + entry.target.id);

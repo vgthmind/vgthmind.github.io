@@ -8,8 +8,7 @@ function initParallax() {
       ro.observe(main);
     }
   }
-  // Always also run these, regardless of ResizeObserver support: some environments
-  // never fire the observer's initial callback, so don't rely on it alone.
+  // fallback in case ResizeObserver's initial callback never fires
   window.addEventListener('load', positionBleeds);
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(positionBleeds);
@@ -46,9 +45,7 @@ function initParallax() {
   update();
 }
 
-// Stretches .bg-bleed elements to span the full width of <main>, breaking out of
-// whatever narrower, centered container they're visually nested inside.
-// Guards against a zero-width <main> (e.g. mid-layout) so it never locks in a broken state.
+// stretches .bg-bleed elements to the full width of <main>
 function positionBleeds() {
   var main = document.querySelector('main');
   if (!main) return;
@@ -63,9 +60,7 @@ function positionBleeds() {
   });
 }
 
-// Defensive: if this script executes after DOMContentLoaded already fired
-// (possible with certain loading/caching setups), run immediately instead
-// of registering a listener for an event that will never come again.
+// in case the script loads after DOMContentLoaded already fired
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initParallax);
 } else {

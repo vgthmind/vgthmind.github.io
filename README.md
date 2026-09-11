@@ -2,21 +2,21 @@
 
 Portfolio en ligne de vgthmind (créateur indépendant) : collections, VGTAPE, pièces sur-mesure, petites séries.
 
-Site statique (HTML / CSS / JS vanilla, sans build). Hébergé via Netlify, connecté à ce dépôt pour un déploiement automatique à chaque `git push`.
+Site statique (HTML / CSS / JS vanilla, sans build), hébergé sur GitHub Pages.
 
-## Modifier le site
+## Structure
 
 - `index.html` — structure et contenu de toutes les sections
 - `css/style.css` — styles
 - `js/` — carrousels et lecteur de clips
 - `assets/` — photos et vidéos, organisées par chapitre/collection
 
-Après une modification :
+## Déploiement
 
 ```bash
 git add -A
-git commit -m "décris le changement ici"
+git commit -m "message"
 git push
 ```
 
-Netlify redéploie automatiquement le site en ligne dans la minute qui suit.
+GitHub Pages redéploie automatiquement après chaque push sur `main`.
