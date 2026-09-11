@@ -282,8 +282,24 @@ main{flex:1;min-width:0;}
 .cutout-block{display:flex;align-items:center;justify-content:center;background:var(--bg-raise);}
 .cutout-block img{width:78%;height:78%;object-fit:contain;}
 
-.clip-video-wrap{aspect-ratio:16/9;background:#0d0d0d;}
+.clip-video-wrap{aspect-ratio:16/9;background:#0d0d0d;position:relative;}
 .clip-video-wrap video{width:100%;height:100%;object-fit:contain;}
+.clip-loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:rgba(13,13,13,0.55);opacity:0;pointer-events:none;transition:opacity .15s ease;
+}
+.clip-video-wrap.loading .clip-loading{opacity:1;}
+.clip-loading-spinner{
+  width:20px;height:20px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.25);border-top-color:#fff;
+  animation:clip-spin .8s linear infinite;
+}
+.clip-loading-label{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.05em;
+  text-transform:uppercase;color:#fff;
+}
+@keyframes clip-spin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion:reduce){.clip-loading-spinner{animation:none;}}
 .clip-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;}
 @media (min-width:640px){.clip-tabs{grid-template-columns:repeat(3,1fr);}}
 .clip-tab{
