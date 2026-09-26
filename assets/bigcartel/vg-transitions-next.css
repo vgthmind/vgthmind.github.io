@@ -16,8 +16,11 @@ html,body{overflow-x:clip !important;}
 }
 
 @media (prefers-reduced-motion: no-preference){
-  body.vg-aspirate{animation:vg-aspirate-out 300ms cubic-bezier(.65,0,.35,1) forwards !important;transform-origin:50vw 50vh !important;will-change:transform,opacity !important;}
-  body.vg-arrive{animation:vg-arrive-in 350ms cubic-bezier(.22,1,.36,1) forwards !important;transform-origin:50vw 50vh !important;will-change:transform,opacity !important;}
+  /* SECTION 3 : --vg-origin permet a pageTransition({x,y}) de faire partir */
+  /* l'aspiration du point clique au lieu du centre (valeur par defaut) -- */
+  /* pose par JS via body.style.setProperty('--vg-origin', x+'px '+y+'px'). */
+  body.vg-aspirate{animation:vg-aspirate-out 300ms cubic-bezier(.65,0,.35,1) forwards !important;transform-origin:var(--vg-origin, 50vw 50vh) !important;will-change:transform,opacity !important;}
+  body.vg-arrive{animation:vg-arrive-in 350ms cubic-bezier(.22,1,.36,1) forwards !important;transform-origin:var(--vg-origin, 50vw 50vh) !important;will-change:transform,opacity !important;}
 }
 @keyframes vg-aspirate-out{0%{transform:perspective(var(--vg-persp,1200px)) rotateX(0deg) rotate(0deg) scale(1);opacity:1;}100%{transform:perspective(var(--vg-persp,1200px)) rotateX(35deg) rotate(-380deg) scale(0.04);opacity:0;}}
 @keyframes vg-arrive-in{0%{transform:perspective(var(--vg-persp,1200px)) rotateX(-35deg) rotate(380deg) scale(0.04);opacity:0;}100%{transform:perspective(var(--vg-persp,1200px)) rotateX(0deg) rotate(0deg) scale(1);opacity:1;}}
@@ -29,10 +32,42 @@ html,body{overflow-x:clip !important;}
 @keyframes vg-fade-in{from{opacity:0;}to{opacity:1;}}
 
 #vg-transition-out{position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;z-index:2147483647 !important;pointer-events:none !important;background:transparent !important;}
-#vg-transition-out img{position:absolute !important;left:50% !important;top:50% !important;object-fit:contain !important;translate:-50% -50% !important;will-change:translate,rotate,scale,opacity !important;}
+/* SECTION 3 : --vg-out-x/--vg-out-y (poses par JS quand pageTransition() */
+/* recoit x/y) deplacent l'icone du centre (valeur par defaut 50%) vers le */
+/* point clique -- meme mecanisme que --vg-origin ci-dessus. */
+#vg-transition-out img{position:absolute !important;left:var(--vg-out-x, 50%) !important;top:var(--vg-out-y, 50%) !important;object-fit:contain !important;translate:-50% -50% !important;will-change:translate,rotate,scale,opacity !important;}
 @keyframes vg-out-pop{0%{scale:0;opacity:0;}70%{scale:1.1;opacity:1;}100%{scale:1;opacity:1;}}
 @keyframes vg-out-spin-z{from{rotate:0deg;}to{rotate:360deg;}}
 @keyframes vg-out-spin-y{from{rotate:0.35 0.5 1 0deg;}to{rotate:0.35 0.5 1 360deg;}}
+
+/* === SECTION 3 : clic produit/categorie -- vetements compagnons qui pop */
+/* et tournoient autour du vetement clique (voir vgSpawnOrbit() dans le JS). */
+/* Remplace entierement l'ancien systeme "swirl" (.vg-swirl-tile / */
+/* .vg-center-icon / vg-suck-out, a supprimer du Body/Custom CSS a */
+/* l'application -- voir APPLIQUER_LOT_A.md). */
+.vg-orbit-tile{
+  position:fixed !important;
+  z-index:2147483646 !important;
+  pointer-events:none !important;
+  object-fit:contain !important;
+  will-change:transform,opacity !important;
+  filter:drop-shadow(0 8px 20px rgba(23,23,23,0.25)) !important;
+  animation:vg-orbit-anim var(--vg-orbit-dur, 550ms) cubic-bezier(.22,1,.36,1) forwards !important;
+}
+/* Repli temporaire "en attendant le detourage" (CLAUDE.md section 3) : */
+/* applique seulement si window.__vgCutoutReady n'est pas encore passe a */
+/* true (voir JS) -- fond beige uni + multiply pour attenuer un fond */
+/* carre/blanc sur une image pas encore detouree. */
+.vg-orbit-tile.vg-orbit-fallback{
+  background:var(--bg,#f4f2ec) !important;
+  mix-blend-mode:multiply !important;
+  border-radius:8px !important;
+}
+@keyframes vg-orbit-anim{
+  0%{ transform:translate(-50%,-50%) scale(0.25) rotate(0deg); opacity:0; }
+  30%{ opacity:1; }
+  100%{ transform:translate(calc(-50% + var(--vg-ox)), calc(-50% + var(--vg-oy))) scale(0.9) rotate(var(--vg-orot, 220deg)); opacity:0; }
+}
 
 /* === SECTION 6 POINT 3 : menu de recherche, verre clair (corrige la version */
 /* sombre existante marquee "STYLE VERRE (ajout)" dans le Custom CSS actuel) === */
