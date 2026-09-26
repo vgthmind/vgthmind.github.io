@@ -112,9 +112,15 @@ en dernier, jamais avant que tu dises explicitement "oui, on bascule".
 
 - **Export du vrai catalogue BigCartel** (photos, descriptions, prix de chaque
   piece actuelle) — je n'ai pas d'acces a l'admin BigCartel depuis cette
-  session pour recuperer ca. A faire depuis un acces qui a le navigateur
-  (comme la conversation "Code"), ou export manuel cote BigCartel si l'option
-  existe.
+  session pour recuperer ca. Ce que la recherche confirme : BigCartel propose
+  un export CSV natif pour les **commandes** (onglet Orders > Export CSV),
+  mais pas d'export CSV natif clairement confirme pour le **catalogue produits**
+  lui-meme — les outils de migration tiers (ex. LitExtension, Cart2Cart)
+  recuperent generalement les produits en scannant l'URL publique de la
+  boutique plutot que via un vrai export BigCartel. Le plus fiable restera
+  probablement de repasser produit par produit depuis l'admin (ou via la
+  conversation "Code", qui a l'acces navigateur) plutot que de compter sur un
+  export en un clic.
 - **Style visuel** : ce prototype a un design minimal fonctionnel, pas encore
   dans l'esthetique verre/chrome du site actuel (curseur custom, animations,
   etc.) — a faire une fois que la structure est validee, pour ne pas refaire
