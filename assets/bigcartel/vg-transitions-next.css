@@ -33,3 +33,50 @@ html,body{overflow-x:clip !important;}
 @keyframes vg-out-pop{0%{scale:0;opacity:0;}70%{scale:1.1;opacity:1;}100%{scale:1;opacity:1;}}
 @keyframes vg-out-spin-z{from{rotate:0deg;}to{rotate:360deg;}}
 @keyframes vg-out-spin-y{from{rotate:0.35 0.5 1 0deg;}to{rotate:0.35 0.5 1 360deg;}}
+
+/* === SECTION 6 POINT 3 : menu de recherche, verre clair (corrige la version */
+/* sombre existante marquee "STYLE VERRE (ajout)" dans le Custom CSS actuel) === */
+/* IMPORTANT : ce fichier est charge via le bloc VGTHMIND colle en tete du */
+/* <head> dans la Layout (avant theme_css_url et donc avant le Custom CSS, */
+/* qui se charge lui APRES). A specificite egale (#search-modal), les */
+/* regles du Custom CSS existant gagneraient donc la cascade et ecraseraient */
+/* celles-ci. Pour eviter de devoir toucher au Custom CSS (voir consigne : */
+/* minimum de copier-coller dans BigCartel), chaque selecteur ci-dessous */
+/* est prefixe par "body" pour etre structurellement plus specifique */
+/* (0,1,1 au lieu de 0,1,0), donc toujours gagnant quel que soit l'ordre */
+/* de chargement reel. Verifie visuellement (capture) le 2026-09-26. */
+body #search-modal{
+  background:rgba(244,242,236,0.55) !important;
+  backdrop-filter:blur(18px) !important;
+  -webkit-backdrop-filter:blur(18px) !important;
+}
+body #search-modal .search-form{
+  background:rgba(255,255,255,0.6) !important;
+  border:1px solid var(--line,rgba(0,0,0,0.12)) !important;
+  box-shadow:0 12px 40px rgba(23,23,23,0.1) !important;
+}
+body #search-modal label{
+  color:var(--steel,#6c6c6c) !important;
+}
+body #search-modal input[type="text"], body #search-modal input:not([type]){
+  background:rgba(255,255,255,0.7) !important;
+  border:1px solid var(--line,rgba(0,0,0,0.12)) !important;
+  color:var(--ink,#171717) !important;
+}
+body #search-modal input:focus{
+  border-color:rgba(47,63,209,0.4) !important;
+  background:rgba(255,255,255,0.85) !important;
+  outline:none !important;
+  box-shadow:0 0 0 2px rgba(47,63,209,0.18) !important;
+}
+body #search-modal button.close-modal{
+  color:var(--ink,#171717) !important;
+  background:rgba(23,23,23,0.06) !important;
+  border-radius:50% !important;
+  width:32px !important;
+  height:32px !important;
+}
+body #search-modal button.close-modal:hover{
+  color:var(--accent,#2f3fd1) !important;
+  background:rgba(47,63,209,0.12) !important;
+}
