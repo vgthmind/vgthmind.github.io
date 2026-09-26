@@ -111,6 +111,11 @@
     var axis = opts.axis === 'y' ? 'y' : 'z';
     var persp = opts.persp || 1200;
     var popStart = Date.now();
+    // SECTION 3 : x/y (px viewport) = point d'origine du clic. Absents pour
+    // les transitions Section 2 (header/panier), qui restent centrees comme
+    // avant (--vg-out-x/--vg-out-y et --vg-origin retombent sur leur valeur
+    // CSS par defaut de 50%/50vw 50vh quand on ne les pose pas ici).
+    var hasOrigin = opts.x != null && opts.y != null;
 
     var overlay = document.createElement('div');
     overlay.id = 'vg-transition-out';
@@ -120,6 +125,10 @@
     img.style.width = w + 'px';
     img.style.height = h + 'px';
     img.style.setProperty('--vg-persp', persp + 'px');
+    if (hasOrigin) {
+      img.style.setProperty('--vg-out-x', opts.x + 'px');
+      img.style.setProperty('--vg-out-y', opts.y + 'px');
+    }
     var period = 360 / VG_SPEED;
     img.style.animationName = 'vg-out-pop, ' + (axis === 'y' ? 'vg-out-spin-y' : 'vg-out-spin-z');
     img.style.animationDuration = POP_MS + 'ms, ' + period + 's';
@@ -134,10 +143,12 @@
     setTimeout(function () {
       vgLog('aspirate start');
       document.documentElement.style.setProperty('--vg-persp', persp + 'px');
+      if (hasOrigin) document.body.style.setProperty('--vg-origin', opts.x + 'px ' + opts.y + 'px');
       document.body.classList.add('vg-aspirate');
       var elapsed = Date.now() - popStart;
       var liveAngle = (elapsed * VG_SPEED / 1000) % 360;
       var payload = { ts: Date.now(), href: href, icon: opts.icon, angle: liveAngle, speed: VG_SPEED, w: w, h: h, axis: axis, persp: persp };
+      if (hasOrigin) { payload.x = opts.x; payload.y = opts.y; }
       try { sessionStorage.setItem('vg-transition', JSON.stringify(payload)); } catch (e) {}
       vgLog('flag written', payload);
       if (opts.passive) {
@@ -373,4 +384,182 @@
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+})();
+
+/* === SECTION 3 : clic produit/categorie === */
+/* Meme mecanique que pageTransition() (section 2) : l'icone qui tournoie */
+/* est ici le vetement clique lui-meme (pas une icone generique), et */
+/* l'origine (x, y) est celle de la vignette cliquee au lieu du centre de */
+/* l'ecran -- transporte via le flag sessionStorage existant (pageTransition */
+/* accepte deja x/y, voir plus haut) pour que l'arrivee sur la page suivante */
+/* reprenne exactement au meme point (continuite geree par le script du */
+/* <head>, deja capable de positionner l'icone via t.x/t.y). */
+/* En plus : d'autres vetements (autres produits de la categorie pour un */
+/* clic categorie, autres photos du produit pour un clic produit) pop et */
+/* tournoient autour du vetement central pendant l'aspiration */
+/* (vgSpawnOrbit ci-dessous). */
+/* REMPLACE ENTIEREMENT l'ancien systeme "swirl" (.vg-swirl-tile / */
+/* .vg-center-icon / body.vg-suck-out) : a l'application du lot, supprimer */
+/* du Body le script correspondant (celui qui definit spawnSwirl()) et de */
+/* Custom CSS les regles .vg-swirl-tile/.vg-center-icon/vg-suck-out/ */
+/* vg-burst-in/.vg-cart-grow/.vg-logo-grow (orphelines une fois ce script */
+/* retire) -- voir APPLIQUER_LOT_A.md. */
+(function () {
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var GROW = 1.15; // "le vetement grossit legerement" (CLAUDE.md section 3)
+
+  // Cache partage /products.json : une seule requete pour tout ce module.
+  // Le Body a par ailleurs plusieurs fetch('/products.json') independants
+  // (splash, swirl actuel, dots couleur...) deja releves comme source de
+  // jank a la section 6 point 1/4 -- a consolider sur window.__vgProducts
+  // lors du Lot B, pas fait ici pour rester dans le perimetre de la section 3.
+  window.__vgProducts = window.__vgProducts || fetch('/products.json').then(function (r) { return r.json(); }).then(function (data) {
+    return Array.isArray(data) ? data : ((data && data.products) || []);
+  }).catch(function () { return []; });
+
+  function imagesForCategory(products, slug, excludeUrl) {
+    var urls = [];
+    for (var i = 0; i < products.length; i++) {
+      var cats = products[i].categories || [];
+      for (var j = 0; j < cats.length; j++) {
+        if (cats[j].permalink === slug) {
+          var imgs = products[i].images;
+          if (imgs && imgs[0] && imgs[0].url !== excludeUrl) urls.push(imgs[0].url);
+          break;
+        }
+      }
+    }
+    return urls;
+  }
+
+  function otherImagesForProduct(products, slug, excludeUrl) {
+    var p = products.filter(function (pr) { return pr.permalink === slug; })[0];
+    if (!p || !p.images) return [];
+    return p.images.map(function (im) { return im.url; }).filter(function (u) { return u !== excludeUrl; });
+  }
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  // Image nette la plus proche disponible sur un <img> lazysize (evite de
+  // partir du placeholder blur-up ?w=20 si data-srcset offre mieux).
+  function bestSrc(img) {
+    if (!img) return null;
+    var cur = img.currentSrc || img.src || '';
+    if (cur && cur.indexOf('w=20') === -1) return cur;
+    var srcset = img.getAttribute('data-srcset') || img.getAttribute('srcset');
+    if (srcset) {
+      var entries = srcset.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      if (entries.length) {
+        var last = entries[entries.length - 1].split(/\s+/)[0];
+        if (last) return last;
+      }
+    }
+    return cur || null;
+  }
+
+  function vgSpawnOrbit(urls, x, y, baseSize) {
+    if (reduceMotion || !urls || !urls.length) return;
+    // "En attendant le detourage" (CLAUDE.md section 3) : window.__vgCutoutReady
+    // sera pose a true une fois les vraies photos produit remplacees par des
+    // versions detourees (voir chantier/lot_A/plan_photos_publiques.md) --
+    // jusque-la, repli mix-blend-mode:multiply sur fond beige.
+    var cutoutReady = window.__vgCutoutReady === true;
+    var n = Math.min(6, urls.length);
+    for (var i = 0; i < n; i++) {
+      (function (i) {
+        var tile = document.createElement('img');
+        tile.className = 'vg-orbit-tile' + (cutoutReady ? '' : ' vg-orbit-fallback');
+        tile.src = urls[i];
+        tile.alt = '';
+        var size = Math.max(46, Math.round(baseSize * 0.32));
+        tile.style.width = size + 'px';
+        tile.style.height = size + 'px';
+        tile.style.left = x + 'px';
+        tile.style.top = y + 'px';
+        var angle = (i / n) * Math.PI * 2 + (Math.random() * 0.6 - 0.3);
+        var dist = baseSize * 0.9 + Math.random() * baseSize * 0.5;
+        tile.style.setProperty('--vg-ox', (Math.cos(angle) * dist).toFixed(0) + 'px');
+        tile.style.setProperty('--vg-oy', (Math.sin(angle) * dist).toFixed(0) + 'px');
+        tile.style.setProperty('--vg-orot', (180 + Math.random() * 140).toFixed(0) + 'deg');
+        tile.style.setProperty('--vg-orbit-dur', (450 + i * 40) + 'ms');
+        tile.style.animationDelay = (i * 25) + 'ms';
+        document.documentElement.appendChild(tile);
+        setTimeout(function () { if (tile.parentNode) tile.remove(); }, 700 + i * 40);
+      })(i);
+    }
+  }
+
+  function vgClearSelection() {
+    try { window.getSelection().removeAllRanges(); } catch (e) {}
+  }
+
+  function categorySlug(href) { var m = href.match(/\/category\/([^\/?#]+)/); return m ? m[1] : null; }
+  function productSlug(href) { var m = href.match(/\/product\/([^\/?#]+)/); return m ? m[1] : null; }
+
+  var prefetchedPages = {};
+  document.addEventListener('mouseover', function (e) {
+    var link = e.target.closest ? e.target.closest('.product-list-link, .vg-category-tile') : null;
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href || prefetchedPages[href]) return;
+    prefetchedPages[href] = true;
+    var l = document.createElement('link');
+    l.rel = 'prefetch';
+    l.href = href;
+    document.head.appendChild(l);
+  }, true);
+
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest ? e.target.closest('.product-list-link, .vg-category-tile') : null;
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href || href.charAt(0) === '#' || link.target === '_blank') return;
+    if (window.__vgTransitioning) { e.preventDefault(); return; }
+
+    var isCategory = link.classList.contains('vg-category-tile');
+    var iconUrl = null;
+    if (isCategory) {
+      var bgEl = link.querySelector('.vg-category-tile-img');
+      if (bgEl) {
+        var bg = getComputedStyle(bgEl).backgroundImage;
+        var m = bg && bg.match(/url\(["']?(.*?)["']?\)/);
+        iconUrl = m ? m[1] : null;
+      }
+    } else {
+      iconUrl = bestSrc(link.querySelector('img.product-list-image, img'));
+    }
+    // Pas d'icone trouvee (structure inattendue) -> navigation normale,
+    // pas de transition plutot qu'un effet casse.
+    if (!iconUrl) return;
+
+    e.preventDefault();
+    vgClearSelection();
+
+    var rect = link.getBoundingClientRect();
+    var x = rect.left + rect.width / 2;
+    var y = rect.top + rect.height / 2;
+    var baseSize = Math.max(rect.width, rect.height);
+    var w = Math.round(rect.width * GROW);
+    var h = Math.round(rect.height * GROW);
+
+    // Le pop + l'aspiration + la navigation partent immediatement (icone
+    // connue de facon synchrone) ; les vetements compagnons de l'orbite
+    // arrivent au mieux (best-effort) sans jamais retarder la transition
+    // elle-meme -- si /products.json n'a pas fini de charger a temps, on a
+    // simplement moins/pas de compagnons pour ce clic, jamais un delai.
+    window.pageTransition({ icon: iconUrl, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000 });
+
+    window.__vgProducts.then(function (products) {
+      var orbitUrls = isCategory
+        ? imagesForCategory(products, categorySlug(href), iconUrl)
+        : otherImagesForProduct(products, productSlug(href), iconUrl);
+      vgSpawnOrbit(shuffle(orbitUrls.slice()), x, y, baseSize);
+    });
+  }, true);
 })();
