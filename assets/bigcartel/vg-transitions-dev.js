@@ -140,10 +140,22 @@
       var payload = { ts: Date.now(), href: href, icon: opts.icon, angle: liveAngle, speed: VG_SPEED, w: w, h: h, axis: axis, persp: persp };
       try { sessionStorage.setItem('vg-transition', JSON.stringify(payload)); } catch (e) {}
       vgLog('flag written', payload);
-      setTimeout(function () {
-        vgLog('navigating to', href);
-        window.location.href = href;
-      }, ASPIRATE_MS);
+      if (opts.passive) {
+        setTimeout(function () {
+          if (document.body.classList.contains('vg-aspirate')) {
+            vgLog('passive submit did not navigate, reverting');
+            document.body.classList.remove('vg-aspirate');
+            if (overlay.parentNode) overlay.remove();
+            try { sessionStorage.removeItem('vg-transition'); } catch (e) {}
+            window.__vgTransitioning = false;
+          }
+        }, ASPIRATE_MS + 900);
+      } else {
+        setTimeout(function () {
+          vgLog('navigating to', href);
+          window.location.href = href;
+        }, ASPIRATE_MS);
+      }
     }, POP_MS);
   };
 
@@ -204,6 +216,13 @@
     if (window.__vgTransitioning) return;
     var href = link.getAttribute('href') || '/cart';
     window.pageTransition({ icon: 'https://vgthmind.github.io/assets/bigcartel/cart-icon.png', href: href, w: 280, h: 280, axis: 'y', persp: 1200 });
+  }, true);
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('form.product-form button[type="submit"]') : null;
+    if (!btn || btn.disabled) return;
+    if (window.__vgTransitioning) return;
+    window.pageTransition({ icon: 'https://vgthmind.github.io/assets/bigcartel/cart-icon.png', href: '/cart', w: 280, h: 280, axis: 'y', persp: 1200, passive: true });
   }, true);
 })();
 
