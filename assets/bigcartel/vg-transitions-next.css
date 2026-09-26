@@ -40,37 +40,42 @@ html,body{overflow-x:clip !important;}
 @keyframes vg-out-spin-z{from{rotate:0deg;}to{rotate:360deg;}}
 @keyframes vg-out-spin-y{from{rotate:0.35 0.5 1 0deg;}to{rotate:0.35 0.5 1 360deg;}}
 
-/* === SECTION 3 : clic produit/categorie -- vetements compagnons qui pop */
-/* et tournoient autour du vetement clique (voir vgSpawnOrbit() dans le JS). */
-/* Remplace entierement l'ancien systeme "swirl" (.vg-swirl-tile / */
-/* .vg-center-icon / vg-suck-out, a supprimer du Body/Custom CSS a */
-/* l'application -- voir APPLIQUER_LOT_A.md). */
-.vg-orbit-tile{
+/* === SECTION 3 : clic produit/categorie -- vraie orbite des vetements */
+/* compagnons autour du vetement clique (voir vgSpawnOrbit() dans le JS, */
+/* qui pilote la rotation via Web Animations API -- transform/opacity */
+/* uniquement, conforme a la regle de perf du projet). Remplace entierement */
+/* l'ancien systeme "swirl" (.vg-swirl-tile / .vg-center-icon / vg-suck-out, */
+/* a supprimer du Body/Custom CSS a l'application -- voir APPLIQUER_LOT_A.md). */
+/* .vg-orbit-wrap = point de pivot (taille nulle, positionne au point */
+/* clique) ; tourner ce wrapper fait orbiter .vg-orbit-tile, positionnee a */
+/* "left" (rayon) de lui, en cercle autour du point clique. Aucun fond, */
+/* aucun cadre (photos deja detourees cote BigCartel, hors les 12 exclues */
+/* cote JS) -- seule exception la pochette VGTAPE, carree par nature. */
+.vg-orbit-wrap{
   position:fixed !important;
-  z-index:2147483646 !important;
+  /* left/top NE sont PAS fixes ici (pas de !important dessus) : poses */
+  /* dynamiquement par le JS (wrap.style.left/top = point clique). Une */
+  /* regle !important ici les ecraserait et casserait tout le */
+  /* positionnement (bug reel rencontre et corrige le 2026-09-26). */
+  width:0 !important; height:0 !important;
   pointer-events:none !important;
+  z-index:2147483646 !important;
+}
+.vg-orbit-tile{
+  position:absolute !important;
+  top:0 !important;
+  /* le -50% vertical est inclus directement dans les transform: du JS
+     (Web Animations API), pas ici, pour eviter un cumul avec `translate`. */
   object-fit:contain !important;
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
   will-change:transform,opacity !important;
   filter:drop-shadow(0 8px 20px rgba(23,23,23,0.25)) !important;
-  animation:vg-orbit-anim var(--vg-orbit-dur, 550ms) cubic-bezier(.22,1,.36,1) forwards !important;
-}
-/* Repli temporaire "en attendant le detourage" (CLAUDE.md section 3) : */
-/* applique seulement si window.__vgCutoutReady n'est pas encore passe a */
-/* true (voir JS) -- fond beige uni + multiply pour attenuer un fond */
-/* carre/blanc sur une image pas encore detouree. */
-.vg-orbit-tile.vg-orbit-fallback{
-  background:var(--bg,#f4f2ec) !important;
-  mix-blend-mode:multiply !important;
-  border-radius:8px !important;
-}
-@keyframes vg-orbit-anim{
-  0%{ transform:translate(-50%,-50%) scale(0.25) rotate(0deg); opacity:0; }
-  30%{ opacity:1; }
-  100%{ transform:translate(calc(-50% + var(--vg-ox)), calc(-50% + var(--vg-oy))) scale(0.9) rotate(var(--vg-orot, 220deg)); opacity:0; }
 }
 
-/* === SECTION 6 POINT 3 : menu de recherche, verre clair (corrige la version */
-/* sombre existante marquee "STYLE VERRE (ajout)" dans le Custom CSS actuel) === */
+/* === SECTION 6 POINT 3 : menu de recherche, verre marque + liseré chrome */
+/* (variante 2, choisie par Jules le 2026-09-26) === */
 /* IMPORTANT : ce fichier est charge via le bloc VGTHMIND colle en tete du */
 /* <head> dans la Layout (avant theme_css_url et donc avant le Custom CSS, */
 /* qui se charge lui APRES). A specificite egale (#search-modal), les */
@@ -80,64 +85,105 @@ html,body{overflow-x:clip !important;}
 /* est prefixe par "body" pour etre structurellement plus specifique */
 /* (0,1,1 au lieu de 0,1,0), donc toujours gagnant quel que soit l'ordre */
 /* de chargement reel. */
-/* [2026-09-26, retour de Jules] Version precedente pas assez visible sur */
-/* les captures -- 2 bugs reels trouves en retestant avec le vrai theme.css */
-/* rendu (tags Liquid substitues) : (1) .modal-content (la barre qui */
-/* contient le formulaire) a un fond NOIR PLEIN via */
-/* background-color:var(--background-color), jamais surcharge nulle part -- */
-/* la vraie cause de la "bande noire opaque", independante de ce qui est mis */
-/* sur #search-modal (qui n'est que le voile derriere) ; (2) le vrai champ */
-/* est <input type="search">, le selecteur input[type="text"] d'origine ne */
-/* le ciblait jamais. Les 2 sont corriges ci-dessous. 3 variantes proposees */
-/* a Jules (captures envoyees) -- ceci est la variante 1 (verre clair leger), */
-/* PROVISOIRE en attendant son choix. Les variantes 2/3 completes sont dans */
-/* chantier/lot_A/point3_variantes/ (depot prive) si une autre est retenue. */
+/* 2 bugs reels corriges (trouves en retestant avec le vrai theme.css rendu, */
+/* tags Liquid substitues) : (1) .modal-content (la barre qui contient le */
+/* formulaire) avait un fond NOIR PLEIN via background-color:var(--background- */
+/* color), jamais surcharge nulle part -- la vraie cause de la "bande noire */
+/* opaque", independante de ce qui est mis sur #search-modal (le voile */
+/* derriere) ; (2) le vrai champ est <input type="search">, le selecteur */
+/* input[type="text"] d'origine ne le ciblait jamais. */
+/* [2026-09-26, 2e retour de Jules] 2 corrections supplementaires : */
+/* (3) plus AUCUN bleu/violet (l'ancien focus utilisait --accent, */
+/* rgba(47,63,209,...)) -- remplace par un anneau chrome/gris, qui reste */
+/* visible au clavier (focus-visible) sans jamais utiliser la couleur */
+/* d'accent bleue du site ; (4) le header devenait illisible (flou par le */
+/* backdrop-filter de #search-modal, qui passe au-dessus car le header n'a */
+/* pas de position/z-index propres dans le theme) -- remonte au-dessus du */
+/* voile via :has() pendant que le menu est ouvert, pour rester net. */
+body:has(#search-modal[aria-hidden="false"]) .header{
+  position:relative !important;
+  z-index:1000 !important;
+}
 body #search-modal .modal-content{
-  background:transparent !important;
-  border-bottom:none !important;
+  background:rgba(255,255,255,0.75) !important;
+  backdrop-filter:blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(150%) !important;
+  border-bottom:3px solid transparent !important;
+  border-image:linear-gradient(90deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) 1 !important;
+  box-shadow:0 8px 28px rgba(23,23,23,0.16) !important;
 }
 body #search-modal{
-  background:rgba(244,242,236,0.55) !important;
-  backdrop-filter:blur(12px) !important;
-  -webkit-backdrop-filter:blur(12px) !important;
+  background:rgba(244,242,236,0.45) !important;
+  backdrop-filter:blur(10px) !important;
+  -webkit-backdrop-filter:blur(10px) !important;
 }
 body #search-modal .search-form{
-  background:rgba(255,255,255,0.62) !important;
-  border:1px solid var(--line,rgba(0,0,0,0.12)) !important;
-  border-radius:14px !important;
-  box-shadow:0 12px 40px rgba(23,23,23,0.12) !important;
-  padding:28px 32px !important;
+  background:transparent !important;
+  padding:32px !important;
 }
 body #search-modal label{
-  color:var(--steel,#6c6c6c) !important;
+  color:#3d4045 !important;
+  font-size:12px !important;
+  font-weight:600 !important;
 }
 body #search-modal input.search-input{
-  background:rgba(255,255,255,0.75) !important;
-  border:1px solid var(--line,rgba(0,0,0,0.12)) !important;
-  color:var(--ink,#171717) !important;
+  background:rgba(255,255,255,0.85) !important;
+  border:1px solid rgba(0,0,0,0.16) !important;
+  color:#171717 !important;
   border-radius:6px !important;
 }
-body #search-modal input.search-input:focus{
-  border-color:rgba(47,63,209,0.4) !important;
-  background:rgba(255,255,255,0.9) !important;
+/* La croix native "effacer" de <input type="search"> est bleutee par */
+/* defaut du navigateur -- neutralisee en croix grise/chrome via un masque */
+/* (aucune surcharge de couleur possible autrement sur cet element). */
+body #search-modal input.search-input::-webkit-search-cancel-button{
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  width:14px !important;
+  height:14px !important;
+  cursor:pointer !important;
+  background-color:#6c6c6c !important;
+  -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M1 1l14 14M15 1L1 15' stroke='black' stroke-width='2' stroke-linecap='round'/></svg>") !important;
+  mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M1 1l14 14M15 1L1 15' stroke='black' stroke-width='2' stroke-linecap='round'/></svg>") !important;
+  -webkit-mask-repeat:no-repeat !important;
+  mask-repeat:no-repeat !important;
+  -webkit-mask-size:contain !important;
+  mask-size:contain !important;
+}
+body #search-modal input.search-input::-webkit-search-cancel-button:hover{
+  background-color:#171717 !important;
+}
+/* Focus chrome/gris, jamais bleu/violet -- toujours visible au clavier. */
+body #search-modal input.search-input:focus,
+body #search-modal input.search-input:focus-visible{
+  border-color:#8f939a !important;
+  background:#fff !important;
   outline:none !important;
-  box-shadow:0 0 0 2px rgba(47,63,209,0.16) !important;
+  box-shadow:0 0 0 2px rgba(143,147,154,0.45) !important;
 }
 body #search-modal button.close-modal{
-  color:var(--ink,#171717) !important;
-  background:rgba(23,23,23,0.08) !important;
+  color:#3d4045 !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
   border-radius:50% !important;
   width:34px !important;
   height:34px !important;
   opacity:1 !important;
 }
-body #search-modal button.close-modal:hover{
-  color:var(--accent,#2f3fd1) !important;
-  background:rgba(47,63,209,0.14) !important;
+body #search-modal button.close-modal:hover,
+body #search-modal button.close-modal:focus-visible{
+  color:#171717 !important;
+  filter:brightness(1.08) !important;
+  outline:none !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
 }
 body #search-modal button.search-button{
-  background:#fff !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
   border-radius:8px !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
+}
+body #search-modal button.search-button:focus-visible{
+  outline:none !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
 }
 
 /* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */

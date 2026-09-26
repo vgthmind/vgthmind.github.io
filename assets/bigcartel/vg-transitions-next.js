@@ -116,6 +116,12 @@
     // avant (--vg-out-x/--vg-out-y et --vg-origin retombent sur leur valeur
     // CSS par defaut de 50%/50vw 50vh quand on ne les pose pas ici).
     var hasOrigin = opts.x != null && opts.y != null;
+    // SECTION 3 : duree de depart (pop+aspiration) allongeable par opts pour
+    // laisser le temps a l'orbite des compagnons de faire au moins un tour
+    // complet (brief CLAUDE.md section 3) sans toucher aux durees de la
+    // section 2 (header/panier, deja validees) qui gardent POP_MS/ASPIRATE_MS.
+    var popMs = opts.popMs || POP_MS;
+    var aspirateMs = opts.aspirateMs || ASPIRATE_MS;
 
     var overlay = document.createElement('div');
     overlay.id = 'vg-transition-out';
@@ -131,7 +137,7 @@
     }
     var period = 360 / VG_SPEED;
     img.style.animationName = 'vg-out-pop, ' + (axis === 'y' ? 'vg-out-spin-y' : 'vg-out-spin-z');
-    img.style.animationDuration = POP_MS + 'ms, ' + period + 's';
+    img.style.animationDuration = popMs + 'ms, ' + period + 's';
     img.style.animationTimingFunction = 'cubic-bezier(.34,1.56,.64,1), linear';
     img.style.animationIterationCount = '1, infinite';
     img.style.animationFillMode = 'forwards, none';
@@ -139,6 +145,7 @@
     document.documentElement.appendChild(overlay);
 
     vgLog('pop start', opts);
+    if (opts.onPop) opts.onPop();
 
     setTimeout(function () {
       vgLog('aspirate start');
@@ -151,6 +158,7 @@
       if (hasOrigin) { payload.x = opts.x; payload.y = opts.y; }
       try { sessionStorage.setItem('vg-transition', JSON.stringify(payload)); } catch (e) {}
       vgLog('flag written', payload);
+      if (opts.onAspirate) opts.onAspirate();
       if (opts.passive) {
         setTimeout(function () {
           if (document.body.classList.contains('vg-aspirate')) {
@@ -160,14 +168,14 @@
             try { sessionStorage.removeItem('vg-transition'); } catch (e) {}
             window.__vgTransitioning = false;
           }
-        }, ASPIRATE_MS + 900);
+        }, aspirateMs + 900);
       } else {
         setTimeout(function () {
           vgLog('navigating to', href);
           window.location.href = href;
-        }, ASPIRATE_MS);
+        }, aspirateMs);
       }
-    }, POP_MS);
+    }, popMs);
   };
 
   function handleArrival() {
@@ -386,27 +394,55 @@
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
 })();
 
-/* === SECTION 3 : clic produit/categorie === */
+/* === SECTION 3 : clic produit/categorie, vraie orbite === */
 /* Meme mecanique que pageTransition() (section 2) : l'icone qui tournoie */
 /* est ici le vetement clique lui-meme (pas une icone generique), et */
 /* l'origine (x, y) est celle de la vignette cliquee au lieu du centre de */
 /* l'ecran -- transporte via le flag sessionStorage existant (pageTransition */
-/* accepte deja x/y, voir plus haut) pour que l'arrivee sur la page suivante */
-/* reprenne exactement au meme point (continuite geree par le script du */
-/* <head>, deja capable de positionner l'icone via t.x/t.y). */
-/* En plus : d'autres vetements (autres produits de la categorie pour un */
-/* clic categorie, autres photos du produit pour un clic produit) pop et */
-/* tournoient autour du vetement central pendant l'aspiration */
-/* (vgSpawnOrbit ci-dessous). */
+/* accepte x/y, voir plus haut) pour que l'arrivee sur la page suivante */
+/* reprenne exactement au meme point. */
+/* D'autres vetements (autres produits de la categorie pour un clic */
+/* categorie, autres photos du produit pour un clic produit) tournent en */
+/* vraie orbite circulaire autour du vetement central (au moins un tour */
+/* complet, sens et vitesse reguliers, via Web Animations API sur un */
+/* wrapper de taille nulle positionne au point clique -- faire tourner ce */
+/* wrapper fait mecaniquement orbiter l'enfant positionne a "radius" de */
+/* lui), puis sont aspires avec la page vers ce meme point (le rayon */
+/* effectif retombe a ~0 en fin d'animation via un scale du wrapper vers 0, */
+/* exactement centre sur le point clique). Duree = celle du depart de */
+/* pageTransition() (popMs+aspirateMs, ici allongee vs la section 2 pour */
+/* laisser le temps a un tour complet), total transition ~1.2-1.6s comme le */
+/* header une fois l'arrivee comptee. */
+/* [2026-09-26, Jules] Les vraies photos produit hebergees par BigCartel */
+/* sont deja detourees (memes fichiers que la reference locale) -- sauf 12 */
+/* photos precises (NON_CUTOUT ci-dessous), jamais utilisees en orbite. Pas */
+/* de repli mix-blend-mode necessaire pour les autres. Miniatures demandees */
+/* en taille reduite (w/h) plutot que la pleine resolution. */
 /* REMPLACE ENTIEREMENT l'ancien systeme "swirl" (.vg-swirl-tile / */
 /* .vg-center-icon / body.vg-suck-out) : a l'application du lot, supprimer */
-/* du Body le script correspondant (celui qui definit spawnSwirl()) et de */
-/* Custom CSS les regles .vg-swirl-tile/.vg-center-icon/vg-suck-out/ */
-/* vg-burst-in/.vg-cart-grow/.vg-logo-grow (orphelines une fois ce script */
-/* retire) -- voir APPLIQUER_LOT_A.md. */
+/* du Body le script correspondant (spawnSwirl) et de Custom CSS les regles */
+/* devenues orphelines -- voir APPLIQUER_LOT_A.md. */
 (function () {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var GROW = 1.15; // "le vetement grossit legerement" (CLAUDE.md section 3)
+  var SECTION3_POP_MS = 200;
+  var SECTION3_ASPIRATE_MS = 450; // depart total 650ms ; mesure : total ~1.5-1.6s jusqu'a la fin de l'anim d'arrivee (voir AUTOVERIF.md)
+  var ORBIT_MS = SECTION3_POP_MS + SECTION3_ASPIRATE_MS;
+
+  // Photos hebergees par BigCartel connues comme non detourees (fond non
+  // transparent) parmi les vraies photos produit -- signalees par Jules le
+  // 2026-09-26 (memes fichiers qu'en reference locale, chantier/assets-photos/
+  // dans le depot prive). Jamais utilisees pour les compagnons en orbite.
+  // Index 0-based dans l'ordre reel de products.json (verifie identique).
+  // Exception : la pochette VGTAPE (cd-vgtape) est carree par nature, pas
+  // de detourage necessaire, jamais dans cette liste.
+  var NON_CUTOUT = {
+    'custom-hoodie': [2, 3],
+    'ja_0001': [2, 3, 4],
+    'pantalon-denim-bleu': [3, 4],
+    'sacoche': [3, 4],
+    'sma_0001': [2, 3, 4]
+  };
 
   // Cache partage /products.json : une seule requete pour tout ce module.
   // Le Body a par ailleurs plusieurs fetch('/products.json') independants
@@ -417,14 +453,40 @@
     return Array.isArray(data) ? data : ((data && data.products) || []);
   }).catch(function () { return []; });
 
+  function cutoutUrls(product) {
+    var bad = NON_CUTOUT[product.permalink] || [];
+    var out = [];
+    (product.images || []).forEach(function (im, i) {
+      if (bad.indexOf(i) === -1 && im && im.url) out.push(im.url);
+    });
+    return out;
+  }
+
+  // Compare par host+chemin (sans la query ?w=&h=...) apres resolution en
+  // URL absolue : l'icone cliquee vient de bestSrc() (une variante srcset
+  // precise, ex. ?w=320, et toujours resolue en absolu par le navigateur)
+  // alors que products.json donne l'URL "de base" (ex. ?w=1000, parfois
+  // relative en test local) -- une comparaison de chaine stricte ne
+  // matcherait jamais et laisserait passer un doublon du vetement clique
+  // parmi les compagnons.
+  function baseUrl(u) {
+    try {
+      var p = new URL(u, location.href);
+      return p.host + p.pathname;
+    } catch (e) {
+      return (u || '').split('?')[0];
+    }
+  }
+
   function imagesForCategory(products, slug, excludeUrl) {
     var urls = [];
+    var excludeBase = baseUrl(excludeUrl);
     for (var i = 0; i < products.length; i++) {
       var cats = products[i].categories || [];
       for (var j = 0; j < cats.length; j++) {
         if (cats[j].permalink === slug) {
-          var imgs = products[i].images;
-          if (imgs && imgs[0] && imgs[0].url !== excludeUrl) urls.push(imgs[0].url);
+          var imgs = cutoutUrls(products[i]);
+          if (imgs[0] && baseUrl(imgs[0]) !== excludeBase) urls.push(imgs[0]);
           break;
         }
       }
@@ -434,8 +496,9 @@
 
   function otherImagesForProduct(products, slug, excludeUrl) {
     var p = products.filter(function (pr) { return pr.permalink === slug; })[0];
-    if (!p || !p.images) return [];
-    return p.images.map(function (im) { return im.url; }).filter(function (u) { return u !== excludeUrl; });
+    if (!p) return [];
+    var excludeBase = baseUrl(excludeUrl);
+    return cutoutUrls(p).filter(function (u) { return baseUrl(u) !== excludeBase; });
   }
 
   function shuffle(arr) {
@@ -463,34 +526,69 @@
     return cur || null;
   }
 
-  function vgSpawnOrbit(urls, x, y, baseSize) {
+  // Redimensionne une URL image BigCartel (?...&w=&h=...) a une taille plus
+  // adaptee aux miniatures en orbite (demande de Jules : "taille adaptee").
+  function resizeUrl(url, size) {
+    try {
+      var u = new URL(url, location.href);
+      if (u.searchParams.has('w')) u.searchParams.set('w', size);
+      if (u.searchParams.has('h')) u.searchParams.set('h', size);
+      return u.toString();
+    } catch (e) { return url; }
+  }
+
+  // Vraie orbite : un wrapper de taille nulle place au point clique tourne
+  // (Web Animations API, vitesse lineaire = reguliere) ; l'image, positionnee
+  // a "radius" de ce wrapper, decrit donc un vrai cercle autour du point
+  // clique en tournant avec lui. Le scale du wrapper (1 -> ~0.05 en fin
+  // d'animation) ramene le rayon effectif vers 0 exactement sur ce point :
+  // c'est l'aspiration avec la page. La rotation propre de l'image (2e
+  // animation, meme axe/perspective que le vetement central) donne la
+  // "legere perspective coherente" demandee.
+  function vgSpawnOrbit(urls, x, y, baseSize, axis, persp) {
     if (reduceMotion || !urls || !urls.length) return;
-    // "En attendant le detourage" (CLAUDE.md section 3) : window.__vgCutoutReady
-    // sera pose a true une fois les vraies photos produit remplacees par des
-    // versions detourees (voir chantier/lot_A/plan_photos_publiques.md) --
-    // jusque-la, repli mix-blend-mode:multiply sur fond beige.
-    var cutoutReady = window.__vgCutoutReady === true;
     var n = Math.min(6, urls.length);
+    var dir = 1;
     for (var i = 0; i < n; i++) {
       (function (i) {
+        var wrap = document.createElement('div');
+        wrap.className = 'vg-orbit-wrap';
+        wrap.style.left = x + 'px';
+        wrap.style.top = y + 'px';
+
         var tile = document.createElement('img');
-        tile.className = 'vg-orbit-tile' + (cutoutReady ? '' : ' vg-orbit-fallback');
-        tile.src = urls[i];
+        tile.className = 'vg-orbit-tile';
+        tile.src = resizeUrl(urls[i], 240);
         tile.alt = '';
-        var size = Math.max(46, Math.round(baseSize * 0.32));
+        var size = Math.max(40, Math.round(baseSize * 0.32));
+        var radius = baseSize * (0.85 + (i % 3) * 0.18 + Math.random() * 0.08);
         tile.style.width = size + 'px';
         tile.style.height = size + 'px';
-        tile.style.left = x + 'px';
-        tile.style.top = y + 'px';
-        var angle = (i / n) * Math.PI * 2 + (Math.random() * 0.6 - 0.3);
-        var dist = baseSize * 0.9 + Math.random() * baseSize * 0.5;
-        tile.style.setProperty('--vg-ox', (Math.cos(angle) * dist).toFixed(0) + 'px');
-        tile.style.setProperty('--vg-oy', (Math.sin(angle) * dist).toFixed(0) + 'px');
-        tile.style.setProperty('--vg-orot', (180 + Math.random() * 140).toFixed(0) + 'deg');
-        tile.style.setProperty('--vg-orbit-dur', (450 + i * 40) + 'ms');
-        tile.style.animationDelay = (i * 25) + 'ms';
-        document.documentElement.appendChild(tile);
-        setTimeout(function () { if (tile.parentNode) tile.remove(); }, 700 + i * 40);
+        tile.style.left = radius + 'px';
+        wrap.appendChild(tile);
+        document.documentElement.appendChild(wrap);
+
+        var startAngle = (i / n) * 360 + (Math.random() * 16 - 8);
+        var sweep = dir * (368 + Math.random() * 24); // "au moins un tour complet"
+        var mid1 = startAngle + sweep * 0.12;
+        var mid2 = startAngle + sweep * 0.85;
+        var endAngle = startAngle + sweep;
+
+        if (wrap.animate) {
+          wrap.animate([
+            { transform: 'rotate(' + startAngle + 'deg) scale(0.3)', opacity: 0, offset: 0 },
+            { transform: 'rotate(' + mid1 + 'deg) scale(1)', opacity: 1, offset: 0.1 },
+            { transform: 'rotate(' + mid2 + 'deg) scale(1)', opacity: 1, offset: 0.85 },
+            { transform: 'rotate(' + endAngle + 'deg) scale(0.05)', opacity: 0, offset: 1 }
+          ], { duration: ORBIT_MS, easing: 'linear', fill: 'forwards' });
+
+          tile.animate([
+            { transform: 'perspective(' + persp + 'px) rotate' + (axis === 'y' ? 'Y' : 'Z') + '(0deg) translateY(-50%)' },
+            { transform: 'perspective(' + persp + 'px) rotate' + (axis === 'y' ? 'Y' : 'Z') + '(' + (dir * 130) + 'deg) translateY(-50%)' }
+          ], { duration: ORBIT_MS, easing: 'linear', fill: 'forwards' });
+        }
+
+        setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, ORBIT_MS + 60);
       })(i);
     }
   }
@@ -548,18 +646,25 @@
     var w = Math.round(rect.width * GROW);
     var h = Math.round(rect.height * GROW);
 
-    // Le pop + l'aspiration + la navigation partent immediatement (icone
-    // connue de facon synchrone) ; les vetements compagnons de l'orbite
-    // arrivent au mieux (best-effort) sans jamais retarder la transition
-    // elle-meme -- si /products.json n'a pas fini de charger a temps, on a
-    // simplement moins/pas de compagnons pour ce clic, jamais un delai.
-    window.pageTransition({ icon: iconUrl, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000 });
-
+    // Les compagnons doivent etre pretes AVANT le pop pour demarrer leur
+    // orbite en meme temps que l'icone centrale (visibles pendant toute
+    // l'aspiration, brief CLAUDE.md) -- on attend donc la resolution de
+    // /products.json avant d'appeler pageTransition(). window.__vgProducts
+    // est lance des le chargement du script, donc deja resolu au moment du
+    // clic dans la quasi-totalite des cas (microtask, pas de delai percu) ;
+    // si jamais il ne l'est pas encore, la transition demarre simplement
+    // des que pret plutot que sans compagnons.
     window.__vgProducts.then(function (products) {
       var orbitUrls = isCategory
         ? imagesForCategory(products, categorySlug(href), iconUrl)
         : otherImagesForProduct(products, productSlug(href), iconUrl);
-      vgSpawnOrbit(shuffle(orbitUrls.slice()), x, y, baseSize);
+      orbitUrls = shuffle(orbitUrls.slice());
+
+      window.pageTransition({
+        icon: iconUrl, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
+        popMs: SECTION3_POP_MS, aspirateMs: SECTION3_ASPIRATE_MS,
+        onPop: function () { vgSpawnOrbit(orbitUrls, x, y, baseSize, 'z', 1000); }
+      });
     });
   }, true);
 })();
