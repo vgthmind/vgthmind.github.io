@@ -9,3 +9,8 @@ desktop.ini
 .claude/
 *.bak
 *.tmp
+
+# shop prototype (Cloudflare Worker / Decap CMS tooling)
+shop/oauth-worker/node_modules/
+shop/oauth-worker/.wrangler/
+shop/oauth-worker/dist/

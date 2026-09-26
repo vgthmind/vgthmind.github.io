@@ -1,0 +1,43 @@
+backend:
+  name: github
+  repo: vgthmind/vgthmind.github.io
+  branch: main-y9d0ju
+  # base_url et auth_endpoint : a completer une fois le proxy OAuth deploye.
+  # Voir shop/README.md, section "Authentification (a faire une seule fois)".
+  # base_url: https://<ton-proxy-oauth>.workers.dev
+  # auth_endpoint: auth
+
+media_folder: "shop/data/uploads"
+public_folder: "/shop/data/uploads"
+
+collections:
+  - name: "products"
+    label: "Pieces"
+    label_singular: "Piece"
+    folder: "shop/data/products"
+    create: true
+    extension: "json"
+    format: "json"
+    slug: "{{slug}}"
+    identifier_field: name
+    summary: "{{name}} — {{price}} EUR"
+    fields:
+      - { label: "Nom", name: "name", widget: "string" }
+      - { label: "Slug (URL, sans espaces)", name: "slug", widget: "string", hint: "ex: pantalon-denim-bleu" }
+      - { label: "Prix (EUR)", name: "price", widget: "number", value_type: "float" }
+      - { label: "Description", name: "description", widget: "text" }
+      - label: "Photos"
+        name: "images"
+        widget: "list"
+        field: { label: "Image", name: "image", widget: "image" }
+      - { label: "Categorie", name: "category", widget: "string", required: false }
+      - { label: "Piece unique", name: "unique", widget: "boolean", default: true }
+      - { label: "Couleur (nom)", name: "couleur_nom", widget: "string", required: false }
+      - { label: "Couleur (hex)", name: "couleur_hex", widget: "color", required: false }
+      - { label: "Lien Instagram (reel)", name: "reel_url", widget: "string", required: false }
+      - label: "Lien de paiement Stripe"
+        name: "stripe_payment_link"
+        widget: "string"
+        required: false
+        hint: "Cree depuis le dashboard Stripe > Payment Links, colle l'URL ici"
+      - { label: "En stock", name: "in_stock", widget: "boolean", default: true }
