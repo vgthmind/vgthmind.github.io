@@ -2,10 +2,11 @@ backend:
   name: github
   repo: vgthmind/vgthmind.github.io
   branch: main-y9d0ju
-  # base_url et auth_endpoint : a completer une fois le proxy OAuth deploye.
-  # Voir shop/README.md, section "Authentification (a faire une seule fois)".
-  # base_url: https://<ton-proxy-oauth>.workers.dev
-  # auth_endpoint: auth
+  # Pas de base_url/auth_endpoint ici : avec Sveltia CMS et un usage solo,
+  # la connexion se fait via un jeton GitHub "fine-grained" (bouton
+  # "Sign in with token" sur l'ecran de connexion), limite a CE depot
+  # uniquement. Pas de serveur OAuth a deployer. Voir shop/README.md,
+  # section "Securite" / "Connexion".
 
 media_folder: "shop/data/uploads"
 public_folder: "/shop/data/uploads"
