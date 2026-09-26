@@ -44,41 +44,65 @@ html,body{overflow-x:clip !important;}
 /* minimum de copier-coller dans BigCartel), chaque selecteur ci-dessous */
 /* est prefixe par "body" pour etre structurellement plus specifique */
 /* (0,1,1 au lieu de 0,1,0), donc toujours gagnant quel que soit l'ordre */
-/* de chargement reel. Verifie visuellement (capture) le 2026-09-26. */
+/* de chargement reel. */
+/* [2026-09-26, retour de Jules] Version precedente pas assez visible sur */
+/* les captures -- 2 bugs reels trouves en retestant avec le vrai theme.css */
+/* rendu (tags Liquid substitues) : (1) .modal-content (la barre qui */
+/* contient le formulaire) a un fond NOIR PLEIN via */
+/* background-color:var(--background-color), jamais surcharge nulle part -- */
+/* la vraie cause de la "bande noire opaque", independante de ce qui est mis */
+/* sur #search-modal (qui n'est que le voile derriere) ; (2) le vrai champ */
+/* est <input type="search">, le selecteur input[type="text"] d'origine ne */
+/* le ciblait jamais. Les 2 sont corriges ci-dessous. 3 variantes proposees */
+/* a Jules (captures envoyees) -- ceci est la variante 1 (verre clair leger), */
+/* PROVISOIRE en attendant son choix. Les variantes 2/3 completes sont dans */
+/* chantier/lot_A/point3_variantes/ (depot prive) si une autre est retenue. */
+body #search-modal .modal-content{
+  background:transparent !important;
+  border-bottom:none !important;
+}
 body #search-modal{
   background:rgba(244,242,236,0.55) !important;
-  backdrop-filter:blur(18px) !important;
-  -webkit-backdrop-filter:blur(18px) !important;
+  backdrop-filter:blur(12px) !important;
+  -webkit-backdrop-filter:blur(12px) !important;
 }
 body #search-modal .search-form{
-  background:rgba(255,255,255,0.6) !important;
+  background:rgba(255,255,255,0.62) !important;
   border:1px solid var(--line,rgba(0,0,0,0.12)) !important;
-  box-shadow:0 12px 40px rgba(23,23,23,0.1) !important;
+  border-radius:14px !important;
+  box-shadow:0 12px 40px rgba(23,23,23,0.12) !important;
+  padding:28px 32px !important;
 }
 body #search-modal label{
   color:var(--steel,#6c6c6c) !important;
 }
-body #search-modal input[type="text"], body #search-modal input:not([type]){
-  background:rgba(255,255,255,0.7) !important;
+body #search-modal input.search-input{
+  background:rgba(255,255,255,0.75) !important;
   border:1px solid var(--line,rgba(0,0,0,0.12)) !important;
   color:var(--ink,#171717) !important;
+  border-radius:6px !important;
 }
-body #search-modal input:focus{
+body #search-modal input.search-input:focus{
   border-color:rgba(47,63,209,0.4) !important;
-  background:rgba(255,255,255,0.85) !important;
+  background:rgba(255,255,255,0.9) !important;
   outline:none !important;
-  box-shadow:0 0 0 2px rgba(47,63,209,0.18) !important;
+  box-shadow:0 0 0 2px rgba(47,63,209,0.16) !important;
 }
 body #search-modal button.close-modal{
   color:var(--ink,#171717) !important;
-  background:rgba(23,23,23,0.06) !important;
+  background:rgba(23,23,23,0.08) !important;
   border-radius:50% !important;
-  width:32px !important;
-  height:32px !important;
+  width:34px !important;
+  height:34px !important;
+  opacity:1 !important;
 }
 body #search-modal button.close-modal:hover{
   color:var(--accent,#2f3fd1) !important;
-  background:rgba(47,63,209,0.12) !important;
+  background:rgba(47,63,209,0.14) !important;
+}
+body #search-modal button.search-button{
+  background:#fff !important;
+  border-radius:8px !important;
 }
 
 /* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
