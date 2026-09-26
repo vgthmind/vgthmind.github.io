@@ -284,3 +284,93 @@
   setTimeout(stripHeaderTitles, 500);
   setTimeout(stripHeaderTitles, 1500);
 })();
+
+/* === SECTION 6 POINT 2 : sequence splash -> accueil (2 clips) === */
+/* Reprend a l'identique le script auparavant colle dans le Body (meme */
+/* logo, meme flag sessionStorage 'vg-splash-seen', meme tirage aleatoire */
+/* de 2 clips parmi 4, meme duree totale ~2.2s). Corrige uniquement le */
+/* defaut releve par Jules (0:03.0-0:03.8) : le script d'origine reassigne */
+/* .src sur UN SEUL <video> partage entre les 2 clips, ce qui force le */
+/* decodeur a se reinitialiser et produit une image noire le temps que le */
+/* 2e clip charge. Ici, 2 <video> distincts se chargent en parallele et */
+/* se fondent en fondu (crossfade CSS), donc plus jamais de noir entre les */
+/* deux. Cette version REMPLACE entierement le script inline du Body : a */
+/* l'application, supprimer le bloc <script> correspondant du Body (voir */
+/* APPLIQUER_LOT_A.md), ce fichier prend le relais seul. */
+(function () {
+  if (location.pathname !== '/') return;
+  var seen = false;
+  try { seen = sessionStorage.getItem('vg-splash-seen'); } catch (err) {}
+  if (seen) return;
+
+  function boot() {
+    var splash = document.createElement('div');
+    splash.className = 'vg-splash';
+    splash.innerHTML = '<img class="vg-splash-logo" src="https://assets.bigcartel.com/theme_images/122404563/Illustration_sans_titre+_1_.PNG" alt="vgthmind"><div class="vg-enter">Enter</div>';
+    document.body.appendChild(splash);
+    var prevOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+
+    splash.addEventListener('click', function () {
+      try { sessionStorage.setItem('vg-splash-seen', '1'); } catch (err) {}
+      var clips = [
+        'https://vgthmind.github.io/assets/bigcartel/clip_1.mp4',
+        'https://vgthmind.github.io/assets/bigcartel/clip_2.mp4',
+        'https://vgthmind.github.io/assets/bigcartel/clip_3.mp4',
+        'https://vgthmind.github.io/assets/bigcartel/clip_4.mp4'
+      ];
+      for (var si = clips.length - 1; si > 0; si--) {
+        var sj = Math.floor(Math.random() * (si + 1));
+        var stmp = clips[si]; clips[si] = clips[sj]; clips[sj] = stmp;
+      }
+      var sequence = clips.slice(0, 2);
+
+      var vidA = document.createElement('video');
+      var vidB = document.createElement('video');
+      [vidA, vidB].forEach(function (v) {
+        v.className = 'vg-splash-video';
+        v.muted = true;
+        v.playsInline = true;
+        v.preload = 'auto';
+        splash.appendChild(v);
+      });
+      splash.classList.add('vg-splash-playing');
+
+      var finished = false;
+      function finish() {
+        if (finished) return;
+        finished = true;
+        splash.classList.add('vg-splash-out');
+        document.documentElement.style.overflow = prevOverflow;
+        setTimeout(function () { splash.remove(); }, 650);
+      }
+
+      var hardStop = setTimeout(finish, 2200);
+
+      function playOn(vid, src, onStarted) {
+        vid.src = src;
+        vid.addEventListener('playing', function once() {
+          vid.removeEventListener('playing', once);
+          if (onStarted) onStarted();
+        });
+        vid.play().catch(finish);
+      }
+
+      // Precharge le 2e clip en parallele du 1er (pas de .src partage :
+      // chaque <video> garde le sien toute sa vie, donc pas de reset).
+      playOn(vidA, sequence[0], function () {
+        vidA.classList.add('vg-active');
+        setTimeout(function () {
+          if (finished) return;
+          playOn(vidB, sequence[1], function () {
+            vidB.classList.add('vg-active');
+            vidA.classList.remove('vg-active');
+            setTimeout(finish, 500);
+          });
+        }, 500);
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+})();

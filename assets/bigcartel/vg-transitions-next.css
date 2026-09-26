@@ -80,3 +80,19 @@ body #search-modal button.close-modal:hover{
   color:var(--accent,#2f3fd1) !important;
   background:rgba(47,63,209,0.12) !important;
 }
+
+/* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
+/* Le Custom CSS actuel affiche TOUTE .vg-splash-video des que .vg-splash- */
+/* -playing est present (une seule video etait prevue a l'origine). Avec */
+/* 2 videos desormais presentes en meme temps (voir vg-transitions-next.js), */
+/* on doit piloter l'opacite individuellement via .vg-active. Prefixe */
+/* "body" pour gagner sur la regle du Custom CSS (meme raison qu'au point 3 : */
+/* ce fichier charge avant le Custom CSS dans le <head>). */
+body .vg-splash-playing .vg-splash-video{
+  opacity:0 !important;
+  z-index:1 !important;
+}
+body .vg-splash-playing .vg-splash-video.vg-active{
+  opacity:1 !important;
+  z-index:2 !important;
+}
