@@ -31,6 +31,23 @@ de domaine, comme aujourd'hui.
 
 Cout total : 0 EUR/mois (uniquement le nom de domaine, comme actuellement).
 
+**Precision utile (recherchee cette nuit) :** la conversation precedente evoquait
+"un petit bout de serveur pour les confirmations de commande" comme brique a
+assembler en plus. En verifiant : ce n'est en fait **pas necessaire** pour le
+strict minimum — Stripe envoie deja nativement un recu au client (a activer
+dans Customer emails settings) et peut notifier le vendeur par email a chaque
+paiement reussi (Personal details > notification preferences), sans code ni
+serveur. Un vrai serveur ne serait utile que pour automatiser autre chose
+(ex. mise a jour d'une feuille de calcul, envoi vers un outil de gestion de
+stock) — pas indispensable pour demarrer.
+
+**Limite honnete a garder en tete :** BigCartel gere nativement le panier
+multi-articles avec frais de port combines (deja note comme un point fort
+dans `bigcartel_contexte_reprise.md`). Les Payment Links Stripe sont plutot
+penses "un lien = un achat" ; regrouper plusieurs pieces differentes dans un
+seul paiement avec Stripe demande une verification plus poussee (pas testee
+cette nuit, a valider avant de considerer la migration complete).
+
 ## Ce qui est deja fait et teste (dans cette session)
 
 - Structure du site + rendu liste/fiche produit : **teste avec un navigateur
