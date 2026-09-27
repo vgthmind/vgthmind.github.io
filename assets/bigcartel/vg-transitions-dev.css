@@ -16,8 +16,11 @@ html,body{overflow-x:clip !important;}
 }
 
 @media (prefers-reduced-motion: no-preference){
-  body.vg-aspirate{animation:vg-aspirate-out 300ms cubic-bezier(.65,0,.35,1) forwards !important;transform-origin:50vw 50vh !important;will-change:transform,opacity !important;}
-  body.vg-arrive{animation:vg-arrive-in 350ms cubic-bezier(.22,1,.36,1) forwards !important;transform-origin:50vw 50vh !important;will-change:transform,opacity !important;}
+  /* SECTION 3 : --vg-origin permet a pageTransition({x,y}) de faire partir */
+  /* l'aspiration du point clique au lieu du centre (valeur par defaut) -- */
+  /* pose par JS via body.style.setProperty('--vg-origin', x+'px '+y+'px'). */
+  body.vg-aspirate{animation:vg-aspirate-out 300ms cubic-bezier(.65,0,.35,1) forwards !important;transform-origin:var(--vg-origin, 50vw 50vh) !important;will-change:transform,opacity !important;}
+  body.vg-arrive{animation:vg-arrive-in 350ms cubic-bezier(.22,1,.36,1) forwards !important;transform-origin:var(--vg-origin, 50vw 50vh) !important;will-change:transform,opacity !important;}
 }
 @keyframes vg-aspirate-out{0%{transform:perspective(var(--vg-persp,1200px)) rotateX(0deg) rotate(0deg) scale(1);opacity:1;}100%{transform:perspective(var(--vg-persp,1200px)) rotateX(35deg) rotate(-380deg) scale(0.04);opacity:0;}}
 @keyframes vg-arrive-in{0%{transform:perspective(var(--vg-persp,1200px)) rotateX(-35deg) rotate(380deg) scale(0.04);opacity:0;}100%{transform:perspective(var(--vg-persp,1200px)) rotateX(0deg) rotate(0deg) scale(1);opacity:1;}}
@@ -29,7 +32,182 @@ html,body{overflow-x:clip !important;}
 @keyframes vg-fade-in{from{opacity:0;}to{opacity:1;}}
 
 #vg-transition-out{position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;z-index:2147483647 !important;pointer-events:none !important;background:transparent !important;}
-#vg-transition-out img{position:absolute !important;left:50% !important;top:50% !important;object-fit:contain !important;translate:-50% -50% !important;will-change:translate,rotate,scale,opacity !important;}
+/* SECTION 3 : --vg-out-x/--vg-out-y (poses par JS quand pageTransition() */
+/* recoit x/y) deplacent l'icone du centre (valeur par defaut 50%) vers le */
+/* point clique -- meme mecanisme que --vg-origin ci-dessus. */
+#vg-transition-out img{position:absolute !important;left:var(--vg-out-x, 50%) !important;top:var(--vg-out-y, 50%) !important;object-fit:contain !important;translate:-50% -50% !important;will-change:translate,rotate,scale,opacity !important;}
 @keyframes vg-out-pop{0%{scale:0;opacity:0;}70%{scale:1.1;opacity:1;}100%{scale:1;opacity:1;}}
 @keyframes vg-out-spin-z{from{rotate:0deg;}to{rotate:360deg;}}
 @keyframes vg-out-spin-y{from{rotate:0.35 0.5 1 0deg;}to{rotate:0.35 0.5 1 360deg;}}
+
+/* === SECTION 3 : clic produit/categorie -- vraie orbite des vetements */
+/* compagnons autour du vetement clique (voir vgSpawnOrbit() dans le JS, */
+/* qui pilote la rotation via Web Animations API -- transform/opacity */
+/* uniquement, conforme a la regle de perf du projet). Remplace entierement */
+/* l'ancien systeme "swirl" (.vg-swirl-tile / .vg-center-icon / vg-suck-out, */
+/* a supprimer du Body/Custom CSS a l'application -- voir APPLIQUER_LOT_A.md). */
+/* .vg-orbit-wrap = point de pivot (taille nulle, positionne au point */
+/* clique) ; tourner ce wrapper fait orbiter .vg-orbit-tile, positionnee a */
+/* "left" (rayon) de lui, en cercle autour du point clique. Aucun fond, */
+/* aucun cadre (photos deja detourees cote BigCartel, hors les 12 exclues */
+/* cote JS) -- seule exception la pochette VGTAPE, carree par nature. */
+.vg-orbit-wrap{
+  position:fixed !important;
+  /* left/top NE sont PAS fixes ici (pas de !important dessus) : poses */
+  /* dynamiquement par le JS (wrap.style.left/top = point clique). Une */
+  /* regle !important ici les ecraserait et casserait tout le */
+  /* positionnement (bug reel rencontre et corrige le 2026-09-26). */
+  width:0 !important; height:0 !important;
+  pointer-events:none !important;
+  /* BUG (releve le 2026-09-27 par capture d'ecran directe -- cf. consigne */
+  /* de Jules de ne se fier qu'a l'image rendue) : ce z-index etait 1 en */
+  /* dessous de #vg-transition-out (l'icone centrale qui pop), qui est */
+  /* elle-meme assez grande a l'echelle de son rayon d'orbite -- les */
+  /* compagnons, bien que correctement positionnes a l'ecran (verifie via */
+  /* getBoundingClientRect), se retrouvaient donc systematiquement peints */
+  /* SOUS l'icone centrale et jamais visibles. Passe a la meme valeur */
+  /* max (2147483647) : les .vg-orbit-wrap sont crees APRES #vg-transition-out */
+  /* (dans onPop, appele juste apres la creation de l'overlay), donc a */
+  /* z-index egal ils passent devant grace a l'ordre du DOM. */
+  z-index:2147483647 !important;
+}
+.vg-orbit-tile{
+  position:absolute !important;
+  top:0 !important;
+  /* le -50% vertical est inclus directement dans les transform: du JS
+     (Web Animations API), pas ici, pour eviter un cumul avec `translate`. */
+  object-fit:contain !important;
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  will-change:transform,opacity !important;
+  filter:drop-shadow(0 8px 20px rgba(23,23,23,0.25)) !important;
+}
+
+/* === SECTION 6 POINT 3 : menu de recherche, verre marque + liseré chrome */
+/* (variante 2, choisie par Jules le 2026-09-26) === */
+/* IMPORTANT : ce fichier est charge via le bloc VGTHMIND colle en tete du */
+/* <head> dans la Layout (avant theme_css_url et donc avant le Custom CSS, */
+/* qui se charge lui APRES). A specificite egale (#search-modal), les */
+/* regles du Custom CSS existant gagneraient donc la cascade et ecraseraient */
+/* celles-ci. Pour eviter de devoir toucher au Custom CSS (voir consigne : */
+/* minimum de copier-coller dans BigCartel), chaque selecteur ci-dessous */
+/* est prefixe par "body" pour etre structurellement plus specifique */
+/* (0,1,1 au lieu de 0,1,0), donc toujours gagnant quel que soit l'ordre */
+/* de chargement reel. */
+/* 2 bugs reels corriges (trouves en retestant avec le vrai theme.css rendu, */
+/* tags Liquid substitues) : (1) .modal-content (la barre qui contient le */
+/* formulaire) avait un fond NOIR PLEIN via background-color:var(--background- */
+/* color), jamais surcharge nulle part -- la vraie cause de la "bande noire */
+/* opaque", independante de ce qui est mis sur #search-modal (le voile */
+/* derriere) ; (2) le vrai champ est <input type="search">, le selecteur */
+/* input[type="text"] d'origine ne le ciblait jamais. */
+/* [2026-09-26, 2e retour de Jules] 2 corrections supplementaires : */
+/* (3) plus AUCUN bleu/violet (l'ancien focus utilisait --accent, */
+/* rgba(47,63,209,...)) -- remplace par un anneau chrome/gris, qui reste */
+/* visible au clavier (focus-visible) sans jamais utiliser la couleur */
+/* d'accent bleue du site ; (4) le header devenait illisible (flou par le */
+/* backdrop-filter de #search-modal, qui passe au-dessus car le header n'a */
+/* pas de position/z-index propres dans le theme) -- remonte au-dessus du */
+/* voile via :has() pendant que le menu est ouvert, pour rester net. */
+body:has(#search-modal[aria-hidden="false"]) .header{
+  position:relative !important;
+  z-index:1000 !important;
+}
+body #search-modal .modal-content{
+  background:rgba(255,255,255,0.75) !important;
+  backdrop-filter:blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(150%) !important;
+  border-bottom:3px solid transparent !important;
+  border-image:linear-gradient(90deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) 1 !important;
+  box-shadow:0 8px 28px rgba(23,23,23,0.16) !important;
+}
+body #search-modal{
+  background:rgba(244,242,236,0.45) !important;
+  backdrop-filter:blur(10px) !important;
+  -webkit-backdrop-filter:blur(10px) !important;
+}
+body #search-modal .search-form{
+  background:transparent !important;
+  padding:32px !important;
+}
+body #search-modal label{
+  color:#3d4045 !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+}
+body #search-modal input.search-input{
+  background:rgba(255,255,255,0.85) !important;
+  border:1px solid rgba(0,0,0,0.16) !important;
+  color:#171717 !important;
+  border-radius:6px !important;
+}
+/* La croix native "effacer" de <input type="search"> est bleutee par */
+/* defaut du navigateur -- neutralisee en croix grise/chrome via un masque */
+/* (aucune surcharge de couleur possible autrement sur cet element). */
+body #search-modal input.search-input::-webkit-search-cancel-button{
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  width:14px !important;
+  height:14px !important;
+  cursor:pointer !important;
+  background-color:#6c6c6c !important;
+  -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M1 1l14 14M15 1L1 15' stroke='black' stroke-width='2' stroke-linecap='round'/></svg>") !important;
+  mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M1 1l14 14M15 1L1 15' stroke='black' stroke-width='2' stroke-linecap='round'/></svg>") !important;
+  -webkit-mask-repeat:no-repeat !important;
+  mask-repeat:no-repeat !important;
+  -webkit-mask-size:contain !important;
+  mask-size:contain !important;
+}
+body #search-modal input.search-input::-webkit-search-cancel-button:hover{
+  background-color:#171717 !important;
+}
+/* Focus chrome/gris, jamais bleu/violet -- toujours visible au clavier. */
+body #search-modal input.search-input:focus,
+body #search-modal input.search-input:focus-visible{
+  border-color:#8f939a !important;
+  background:#fff !important;
+  outline:none !important;
+  box-shadow:0 0 0 2px rgba(143,147,154,0.45) !important;
+}
+body #search-modal button.close-modal{
+  color:#3d4045 !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
+  border-radius:50% !important;
+  width:34px !important;
+  height:34px !important;
+  opacity:1 !important;
+}
+body #search-modal button.close-modal:hover,
+body #search-modal button.close-modal:focus-visible{
+  color:#171717 !important;
+  filter:brightness(1.08) !important;
+  outline:none !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
+}
+body #search-modal button.search-button{
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  border-radius:8px !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
+}
+body #search-modal button.search-button:focus-visible{
+  outline:none !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
+}
+
+/* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
+/* Le Custom CSS actuel affiche TOUTE .vg-splash-video des que .vg-splash- */
+/* -playing est present (une seule video etait prevue a l'origine). Avec */
+/* 2 videos desormais presentes en meme temps (voir vg-transitions-next.js), */
+/* on doit piloter l'opacite individuellement via .vg-active. Prefixe */
+/* "body" pour gagner sur la regle du Custom CSS (meme raison qu'au point 3 : */
+/* ce fichier charge avant le Custom CSS dans le <head>). */
+body .vg-splash-playing .vg-splash-video{
+  opacity:0 !important;
+  z-index:1 !important;
+}
+body .vg-splash-playing .vg-splash-video.vg-active{
+  opacity:1 !important;
+  z-index:2 !important;
+}
