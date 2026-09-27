@@ -59,7 +59,17 @@ html,body{overflow-x:clip !important;}
   /* positionnement (bug reel rencontre et corrige le 2026-09-26). */
   width:0 !important; height:0 !important;
   pointer-events:none !important;
-  z-index:2147483646 !important;
+  /* BUG (releve le 2026-09-27 par capture d'ecran directe -- cf. consigne */
+  /* de Jules de ne se fier qu'a l'image rendue) : ce z-index etait 1 en */
+  /* dessous de #vg-transition-out (l'icone centrale qui pop), qui est */
+  /* elle-meme assez grande a l'echelle de son rayon d'orbite -- les */
+  /* compagnons, bien que correctement positionnes a l'ecran (verifie via */
+  /* getBoundingClientRect), se retrouvaient donc systematiquement peints */
+  /* SOUS l'icone centrale et jamais visibles. Passe a la meme valeur */
+  /* max (2147483647) : les .vg-orbit-wrap sont crees APRES #vg-transition-out */
+  /* (dans onPop, appele juste apres la creation de l'overlay), donc a */
+  /* z-index egal ils passent devant grace a l'ordre du DOM. */
+  z-index:2147483647 !important;
 }
 .vg-orbit-tile{
   position:absolute !important;

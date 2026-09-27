@@ -549,6 +549,18 @@
     if (reduceMotion || !urls || !urls.length) return;
     var n = Math.min(6, urls.length);
     var dir = 1;
+    // BUG (releve le 2026-09-27 par extraction/inspection directe des frames
+    // video, la video etant la seule preuve valable -- cf. consigne de
+    // Jules) : le rayon d'origine (baseSize * 0.85-1.11, ex. ~450px pour une
+    // vignette de grille 322x498) depassait largement la distance entre le
+    // point clique et les bords du viewport des que ce point n'etait pas
+    // pile au centre de l'ecran (cas normal pour une grille) -- l'essentiel
+    // du cercle sortait alors du viewport et les compagnons n'etaient
+    // quasiment jamais visibles a l'image, meme si le calcul d'orbite
+    // lui-meme (angle, vitesse) etait correct. Plafonne desormais a une
+    // fraction de la plus petite dimension du viewport pour garantir que le
+    // cercle complet reste visible quel que soit l'endroit clique.
+    var maxRadius = Math.max(70, Math.min(window.innerWidth, window.innerHeight) * 0.24);
     for (var i = 0; i < n; i++) {
       (function (i) {
         var wrap = document.createElement('div');
@@ -560,8 +572,8 @@
         tile.className = 'vg-orbit-tile';
         tile.src = resizeUrl(urls[i], 240);
         tile.alt = '';
-        var size = Math.max(40, Math.round(baseSize * 0.32));
-        var radius = baseSize * (0.85 + (i % 3) * 0.18 + Math.random() * 0.08);
+        var radius = Math.min(baseSize * (0.55 + (i % 3) * 0.12 + Math.random() * 0.06), maxRadius);
+        var size = Math.max(36, Math.min(Math.round(baseSize * 0.32), Math.round(radius * 0.75)));
         tile.style.width = size + 'px';
         tile.style.height = size + 'px';
         tile.style.left = radius + 'px';
@@ -623,7 +635,18 @@
     var isCategory = link.classList.contains('vg-category-tile');
     var iconUrl = null;
     if (isCategory) {
-      var bgEl = link.querySelector('.vg-category-tile-img');
+      // BUG (releve le 2026-09-27 par comparaison vignette/popup a la
+      // video -- cf. consigne de Jules) : ce selecteur matchait aussi bien
+      // le calque de base (.vg-category-tile-img) que le calque de survol
+      // (.vg-category-tile-img.vg-category-tile-img-alt), les deux
+      // partageant la classe de base -- querySelector renvoyait le premier
+      // du DOM (le calque de base, en principe stable), mais un survol reel
+      // ou simule par un clic automatise peut avoir deja fait passer le
+      // calque alt a opacity:1 par-dessus au moment du clic, creant un saut
+      // visible entre ce qui est affiche a l'ecran et l'image reprise par
+      // le popup. On exclut maintenant explicitement le calque alt pour
+      // etre certain de toujours lire l'image de repos.
+      var bgEl = link.querySelector('.vg-category-tile-img:not(.vg-category-tile-img-alt)');
       if (bgEl) {
         var bg = getComputedStyle(bgEl).backgroundImage;
         var m = bg && bg.match(/url\(["']?(.*?)["']?\)/);
@@ -654,14 +677,33 @@
     // clic dans la quasi-totalite des cas (microtask, pas de delai percu) ;
     // si jamais il ne l'est pas encore, la transition demarre simplement
     // des que pret plutot que sans compagnons.
+    var slug = isCategory ? categorySlug(href) : productSlug(href);
+
     window.__vgProducts.then(function (products) {
+      // BUG (releve le 2026-09-27 -- meme cause que ci-dessus pour les
+      // categories) : pour un produit, bestSrc() lit currentSrc en direct
+      // sur l'<img> du DOM, qui peut deja avoir ete permute par le script
+      // hover existant du theme (mouseenter -> img.src = 2e photo, voir
+      // markup genere) avant meme que le clic parte -- resultat : le
+      // vetement qui pop n'est pas celui de la vignette de repos. On relit
+      // l'image "de repos" (images[0]) directement dans products.json,
+      // qui est la source de verite deja utilisee pour les compagnons et
+      // ne depend d'aucun etat de survol.
+      var restIcon = iconUrl;
+      if (!isCategory) {
+        var clickedProduct = products.filter(function (p) { return p.permalink === slug; })[0];
+        if (clickedProduct && clickedProduct.images && clickedProduct.images[0] && clickedProduct.images[0].url) {
+          restIcon = clickedProduct.images[0].url;
+        }
+      }
+
       var orbitUrls = isCategory
-        ? imagesForCategory(products, categorySlug(href), iconUrl)
-        : otherImagesForProduct(products, productSlug(href), iconUrl);
+        ? imagesForCategory(products, slug, restIcon)
+        : otherImagesForProduct(products, slug, restIcon);
       orbitUrls = shuffle(orbitUrls.slice());
 
       window.pageTransition({
-        icon: iconUrl, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
+        icon: restIcon, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
         popMs: SECTION3_POP_MS, aspirateMs: SECTION3_ASPIRATE_MS,
         onPop: function () { vgSpawnOrbit(orbitUrls, x, y, baseSize, 'z', 1000); }
       });
