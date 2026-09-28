@@ -110,11 +110,25 @@ html,body{overflow-x:clip !important;}
 /* backdrop-filter de #search-modal, qui passe au-dessus car le header n'a */
 /* pas de position/z-index propres dans le theme) -- remonte au-dessus du */
 /* voile via :has() pendant que le menu est ouvert, pour rester net. */
+/* [2026-09-27/28, retour video 23:46 de vgthmind] BUG REEL : en remontant le */
+/* header au-dessus du voile (ligne suivante), rien ne decalait le panneau */
+/* du menu en consequence -- .modal-content demarre par defaut tout en haut */
+/* de #search-modal (theme.css ne centre/decale rien verticalement), donc le */
+/* header (maintenant au-dessus de tout) recouvre exactement le champ de */
+/* recherche, illisible et probablement inutilisable. Corrige en decalant */
+/* .modal-content sous le header via --header-height (variable CSS globale */
+/* du theme, deja utilisee ailleurs dans theme.css pour ce meme calcul -- */
+/* fiable sur desktop ET mobile, s'adapte automatiquement si vgthmind change la */
+/* taille du logo dans les reglages BigCartel). Le header reste au-dessus du */
+/* voile (toujours utile : theme.css ne lui donne ni position ni z-index */
+/* propres, donc il serait flou/illisible derriere le fond du voile sans ce */
+/* z-index), mais ne recouvre plus jamais le panneau. */
 body:has(#search-modal[aria-hidden="false"]) .header{
   position:relative !important;
   z-index:1000 !important;
 }
 body #search-modal .modal-content{
+  margin-top:calc(var(--header-height, 90px) + 16px) !important;
   background:rgba(255,255,255,0.75) !important;
   backdrop-filter:blur(24px) saturate(150%) !important;
   -webkit-backdrop-filter:blur(24px) saturate(150%) !important;
@@ -126,6 +140,7 @@ body #search-modal{
   background:rgba(244,242,236,0.45) !important;
   backdrop-filter:blur(10px) !important;
   -webkit-backdrop-filter:blur(10px) !important;
+  overflow-y:auto !important;
 }
 body #search-modal .search-form{
   background:transparent !important;
