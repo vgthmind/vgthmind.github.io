@@ -354,11 +354,26 @@
       fallback.setAttribute('aria-label', 'Close search dialog');
       fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
       fallback.addEventListener('click', closeSearch);
-      // Ajoute directement sur #search-modal (position:fixed, cf. CSS) plutot
-      // que dans .wrapper : .wrapper est enfant de .modal-content--inner qui a
-      // overflow:hidden dans le theme -- c'est tres probablement ce qui
-      // decoupait deja le bouton natif malgre un position:absolute correct.
-      modal.appendChild(fallback);
+      // [2026-09-28, vidéo 13:58] Ajoutee en position:fixed ancree au viewport,
+      // la 1re version de cette croix de secours restait invisible pendant
+      // TOUTE l'ouverture du menu et n'apparaissait qu'au moment du fondu de
+      // fermeture. Cause reelle (signalee par Jules apres analyse image par
+      // image) : #search-modal et .header sont deux contextes d'empilement
+      // SEPARES (chacun position+z-index propres) et SIBLINGS dans le DOM --
+      // un z-index eleve a l'INTERIEUR de #search-modal ne compte que dans
+      // CE contexte ; c'est le z-index de #search-modal LUI-MEME (999, non
+      // modifiable sans casser le theme) qui est compare a celui du header
+      // (1000, ajoute pour qu'il reste net) -- le header gagne donc et peint
+      // par-dessus TOUT le contenu de #search-modal, croix de secours
+      // comprise, tant que le menu est ouvert. A la fermeture, l'attribut
+      // aria-hidden change avant la fin du fondu CSS : le header retombe
+      // aussitot a son z-index normal, ce qui laisse furtivement voir la
+      // croix pendant les ~200ms de transition -- exactement ce que Jules a
+      // vu. Fix : ajoutee DANS .modal-content (position:relative, propre a
+      // ce fichier) plutot que sur #search-modal -- elle n'a alors plus a
+      // rivaliser avec le header, juste avec le contenu du panneau lui-meme.
+      var panel = modal.querySelector('.modal-content');
+      (panel || modal).appendChild(fallback);
     }
 
     var mo = new MutationObserver(function (mutList) {

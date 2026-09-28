@@ -123,8 +123,31 @@ html,body{overflow-x:clip !important;}
 /* voile (toujours utile : theme.css ne lui donne ni position ni z-index */
 /* propres, donc il serait flou/illisible derriere le fond du voile sans ce */
 /* z-index), mais ne recouvre plus jamais le panneau. */
+/* [2026-09-28, vidéo 13:58] BUG REEL : le bouton loupe du header */
+/* (.open-search-button) affiche un cercle BLEU (Custom CSS existant, */
+/* ".open-search-button:hover{border-color:var(--accent)}", jamais prevu */
+/* pour l'etat "menu ouvert") -- contraire a la consigne "aucun bleu nulle */
+/* part". Neutralise au survol ET au focus avec la meme teinte chrome que */
+/* le reste de la DA verre/chrome. */
+body .open-search-button:hover,
+body .open-search-button:focus,
+body .open-search-button:focus-visible{
+  border-color:#8f939a !important;
+  background:rgba(0,0,0,0.04) !important;
+  outline:none !important;
+}
+/* [2026-09-28, vidéo 13:58] BUG REEL : une bande beige vide apparaissait */
+/* au-dessus du header quand le menu est ouvert -- le header se retrouvait */
+/* decale vers le bas (~1x sa hauteur) au lieu de rester a sa place normale */
+/* en haut de la page. Cause probable : forcer position:relative sur un */
+/* header normalement position:static perturbe le calcul de hauteur dans */
+/* son parent (probablement flex/grid, header a flex-shrink:0 dans le */
+/* theme). position:sticky top:0 est visuellement identique a static tant */
+/* qu'on est en haut de la page (donc aucun changement visible habituel), */
+/* mais cree tout de meme un contexte d'empilement propre pour le z-index. */
 body:has(#search-modal[aria-hidden="false"]) .header{
-  position:relative !important;
+  position:sticky !important;
+  top:0 !important;
   z-index:1000 !important;
 }
 body #search-modal .modal-content{
@@ -222,18 +245,35 @@ body #search-modal button.close-modal{
   border:none !important;
   cursor:pointer !important;
 }
-/* [2026-09-28] La croix de secours (.vg-search-close-fallback, voir */
-/* vg-transitions-dev.js) est ajoutee directement sur #search-modal (pas */
-/* dans .wrapper) car .modal-content--inner a overflow:hidden dans le theme */
-/* -- tres probablement la vraie cause de l'invisibilite du bouton natif */
-/* (position:absolute dans .wrapper, decoupe silencieusement par cet */
-/* ancetre malgre une largeur/hauteur non nulles). En position:fixed, */
-/* ancree au viewport (comme #search-modal lui-meme), donc jamais decoupee. */
+/* [2026-09-28, vidéo 13:58] BUG REEL (analyse image par image de Jules) : */
+/* la 1re version de cette croix (position:fixed, ancree au viewport) etait */
+/* invisible pendant TOUTE l'ouverture du menu, et n'apparaissait que */
+/* furtivement pendant le fondu de fermeture. Vraie cause : #search-modal */
+/* (z-index:999, du theme) et .header (z-index:1000, ajoute par nous pour */
+/* qu'il reste net au-dessus du voile) sont deux contextes d'empilement */
+/* SEPARES et SIBLINGS dans le DOM -- un z-index eleve a l'interieur de */
+/* #search-modal ne compte que localement ; c'est le z-index de */
+/* #search-modal lui-meme qui est compare a celui du header, et le header */
+/* gagne (1000 > 999), peignant par-dessus tout le contenu du menu tant */
+/* qu'il est ouvert. A la fermeture, aria-hidden change avant la fin du */
+/* fondu CSS : le header retombe aussitot a son z-index normal, laissant */
+/* furtivement voir la croix pendant la transition -- exactement ce qui a */
+/* ete vu en video. Fix : la croix est deplacee DANS .modal-content (ajoutee */
+/* en JS a cet endroit desormais, voir vg-transitions-dev.js), qui devient */
+/* son propre contexte de positionnement -- elle n'a plus a rivaliser avec */
+/* le header du tout, seulement avec le contenu du panneau (z-index local */
+/* suffisant). .modal-content--inner a overflow:hidden dans le theme, mais */
+/* .modal-content lui-meme (le parent direct, pas son enfant --inner) n'a */
+/* pas cette contrainte -- ajouter la croix comme enfant DIRECT de */
+/* .modal-content (et non de .wrapper, plus profond) evite tout decoupage. */
+body #search-modal .modal-content{
+  position:relative !important;
+}
 body #search-modal .vg-search-close-fallback{
-  position:fixed !important;
-  top:calc(var(--header-height, 90px) + 28px) !important;
-  right:24px !important;
-  z-index:2147483647 !important;
+  position:absolute !important;
+  top:12px !important;
+  right:12px !important;
+  z-index:10 !important;
   display:flex !important;
   align-items:center !important;
   justify-content:center !important;
