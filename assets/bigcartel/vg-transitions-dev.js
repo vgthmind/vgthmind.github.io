@@ -304,69 +304,319 @@
   setTimeout(stripHeaderTitles, 1500);
 })();
 
-/* === SECTION 6 POINT 3 (suite) : filet de securite pour la croix de */
-/* fermeture du menu de recherche === */
-/* [2026-09-28, retest etape a)] Diagnostic en 3 temps (mesures directes via */
-/* une exception jetee expres -- seul moyen de lire l'iframe cross-origin de */
-/* l'apercu, console.log() n'y traverse pas) : */
-/* 1) La croix qui flottait au-dessus du header etait le bouton NATIF du */
-/*    theme (button.close-modal), rendu visible par une regle CSS (chrome + */
-/*    position:absolute) mais mal place -- isReallyVisible() le jugeait donc */
-/*    "visible" a raison et ne creait jamais le filet de secours. Fix : le */
-/*    natif est desormais cache purement en CSS (display:none), le filet de */
-/*    secours ajoute SANS CONDITION. */
-/* 2) Premier essai du filet de secours dans .modal-content : ENCORE mal */
-/*    place. Mesure : .modal-content ET .modal-content--inner font 1200px */
-/*    de large, BORD A BORD (edge-to-edge) -- pas le panneau visible. */
-/* 3) Essai suivant dans .wrapper (200px-1000px, 800px, centree dans les */
-/*    1200px) : toujours legerement hors du panneau visible reel. Cause */
-/*    trouvee : le panneau visible etroit qu'on voit a l'ecran ne vient */
-/*    d'AUCUN de ces 3 elements, mais d'une ancienne regle orpheline dans le */
-/*    Custom CSS (#search-modal .search-form{max-width:640px;margin:0 auto; */
-/*    border-radius:16px;...}, reliquat d'un style verre fonce anterieur */
-/*    jamais nettoye). Fix definitif : .modal-content porte maintenant sa */
-/*    propre largeur (max-width:640px, centree, voir vg-transitions-dev.css) */
-/*    au lieu de deriver son aspect visuel d'un reliquat qu'un futur */
-/*    nettoyage du Custom CSS pourrait faire disparaitre sans prevenir -- */
-/*    le filet de secours peut donc a nouveau s'ancrer dessus de maniere */
-/*    fiable. */
+/* === SECTION 6 POINT 3 : panneau de recherche (V1 "carte verre") === */
+/* Croix de fermeture : le bouton natif du theme (button.close-modal) est */
+/* cache en CSS -- il etait rendu dans .wrapper, mal place, et faussait */
+/* toute detection de visibilite. Une croix chromee est ajoutee SANS */
+/* CONDITION dans .modal-content (qui porte la largeur du panneau, voir */
+/* vg-transitions-dev.css ; sans elle .modal-content fait 1200px bord a */
+/* bord -- mesure directe du 2026-09-28). */
+/* Resultats en direct : filtrage local de /products.json pendant la */
+/* frappe (deja charge une fois par la section 3, partage via */
+/* window.__vgProducts). Vignettes detourees uniquement (NON_CUTOUT exclu), */
+/* clavier haut/bas/Entree, Echap gere par le theme. Rien ne depend du */
+/* seul survol : chaque resultat est un vrai lien, tactile compris. */
+/* Sur telephone, la liste est bornee a la partie visible au-dessus du */
+/* clavier (visualViewport) et defile a l'interieur. */
+window.__VG_NON_CUTOUT = window.__VG_NON_CUTOUT || {
+  'custom-hoodie': [2, 3],
+  'ja_0001': [2, 3, 4],
+  'pantalon-denim-bleu': [3, 4],
+  'sacoche': [3, 4],
+  'sma_0001': [2, 3, 4]
+};
+window.__vgProducts = window.__vgProducts || fetch('/products.json').then(function (r) { return r.json(); }).then(function (data) {
+  return Array.isArray(data) ? data : ((data && data.products) || []);
+}).catch(function () { return []; });
+
 (function () {
+  // Meme liste que le badge "piece unique" du Body (seule exception).
+  var NOT_UNIQUE = ['cd-vgtape'];
+  var HIDDEN_CATS = ['all', 'latest-drop'];
+  var MAX_RESULTS = 6;
+
   function closeSearch() {
-    // Reutilise le chemin de fermeture deja valide (Echap) plutot que de
-    // manipuler aria-hidden/scroll-lock a la main et risquer un etat
-    // incoherent avec ce que gere le theme en interne.
+    // Reutilise le chemin de fermeture deja valide du theme (Echap).
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
   }
 
-  function setup(modal) {
-    if (modal.querySelector('.vg-search-close-fallback')) return;
-    var fallback = document.createElement('button');
-    fallback.type = 'button';
-    fallback.className = 'vg-search-close-fallback';
-    fallback.setAttribute('aria-label', 'Close search dialog');
-    fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
-    fallback.addEventListener('click', closeSearch);
-    var panel = modal.querySelector('.modal-content');
-    (panel || modal).appendChild(fallback);
+  function norm(s) {
+    return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 
-  // [2026-09-28] BUG REEL trouve en testant l'etape a) : ce module entier ne
-  // demarrait jamais dans le vrai brouillon. Cause probable : ce script est
-  // charge tot (preload dans le <head>) et peut s'executer AVANT que
-  // #search-modal (tout en bas de layout.html) existe dans le DOM -- un
-  // simple getElementById au chargement du script echouait donc
-  // silencieusement, sans jamais reessayer. Attend desormais le DOM prêt,
-  // avec un filet de secours par MutationObserver si l'element apparait
-  // encore plus tard que DOMContentLoaded.
+  function cutoutThumb(p) {
+    var bad = window.__VG_NON_CUTOUT[p.permalink] || [];
+    var imgs = p.images || [];
+    for (var i = 0; i < imgs.length; i++) {
+      if (bad.indexOf(i) === -1 && imgs[i] && imgs[i].url) {
+        try {
+          var u = new URL(imgs[i].url, location.href);
+          u.searchParams.set('w', '240');
+          u.searchParams.set('h', '240');
+          return u.toString();
+        } catch (e) { return imgs[i].url; }
+      }
+    }
+    return null;
+  }
+
+  function catLabel(p) {
+    var cats = (p.categories || []).filter(function (c) { return HIDDEN_CATS.indexOf(c.permalink) === -1; });
+    var parts = [];
+    if (cats[0] && cats[0].name) parts.push(cats[0].name);
+    if (NOT_UNIQUE.indexOf(p.permalink) === -1) parts.push('One of a kind');
+    return parts.join(' · ');
+  }
+
+  function price(p) {
+    var v = Number(p.default_price != null ? p.default_price : p.price);
+    if (isNaN(v)) return '';
+    return v.toFixed(2).replace('.', ',') + ' EUR';
+  }
+
+  function setup(modal) {
+    if (modal.__vgSearchReady) return;
+    modal.__vgSearchReady = true;
+    var panel = modal.querySelector('.modal-content');
+    var wrapper = modal.querySelector('.wrapper');
+    var form = modal.querySelector('form.search-form');
+    var input = modal.querySelector('input.search-input');
+
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'vg-search-close-fallback';
+    closeBtn.setAttribute('aria-label', 'Close search');
+    closeBtn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>';
+    closeBtn.addEventListener('click', closeSearch);
+    (panel || modal).appendChild(closeBtn);
+
+    if (!form || !input || !wrapper) return;
+    input.setAttribute('placeholder', 'Search products…');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', 'vg-sr-list');
+    input.setAttribute('aria-expanded', 'false');
+
+    var box = document.createElement('div');
+    box.className = 'vg-sr';
+    box.hidden = true;
+    box.innerHTML =
+      '<div class="vg-sr-head"><span class="vg-sr-count" aria-live="polite"></span><a class="vg-sr-all" href="/products">See all</a></div>' +
+      '<ul class="vg-sr-list" id="vg-sr-list" role="listbox" aria-label="Search results"></ul>' +
+      '<div class="vg-sr-hint"><span><kbd>↑↓</kbd>navigate &nbsp; <kbd>Enter</kbd>open</span><span><kbd>Esc</kbd>close</span></div>';
+    wrapper.appendChild(box);
+    var countEl = box.querySelector('.vg-sr-count');
+    var allLink = box.querySelector('.vg-sr-all');
+    var list = box.querySelector('.vg-sr-list');
+
+    var items = [];
+    var active = -1;
+    var reqId = 0;
+
+    function fitToViewport() {
+      // Borne la liste a ce qui reste visible au-dessus du clavier du
+      // telephone (visualViewport) ; defile a l'interieur au-dela.
+      if (box.hidden) return;
+      var vv = window.visualViewport;
+      var visibleBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
+      var top = list.getBoundingClientRect().top;
+      var reserve = window.matchMedia('(hover:none), (pointer:coarse)').matches ? 16 : 44;
+      list.style.maxHeight = Math.max(140, Math.floor(visibleBottom - top - reserve)) + 'px';
+    }
+
+    function setActive(i) {
+      if (items[active]) items[active].classList.remove('is-active');
+      active = i;
+      if (items[active]) {
+        items[active].classList.add('is-active');
+        input.setAttribute('aria-activedescendant', items[active].id);
+        items[active].scrollIntoView({ block: 'nearest' });
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+    }
+
+    function go(a) {
+      var href = a.getAttribute('href');
+      var icon = a.getAttribute('data-icon');
+      if (typeof window.pageTransition === 'function' && icon && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        window.pageTransition({ icon: icon, href: href, w: 280, h: 280, axis: 'z', persp: 1000 });
+      } else {
+        location.href = href;
+      }
+    }
+
+    function render(q, products) {
+      var nq = norm(q);
+      list.innerHTML = '';
+      items = [];
+      active = -1;
+      input.removeAttribute('aria-activedescendant');
+      if (!nq) {
+        box.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      var words = nq.split(/\s+/);
+      // Uniquement les produits en vente (ni epuises, ni "coming soon").
+      var live = products.filter(function (p) { return !p.status || p.status === 'active'; });
+      function hit(hay) { return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
+      // Le nom d'abord ; la categorie seulement si aucun nom ne correspond
+      // (sinon "short" remonte tous les pantalons, rangés en "Pants/Shorts").
+      var matches = live.filter(function (p) { return hit(norm(p.name)); });
+      if (!matches.length) {
+        matches = live.filter(function (p) {
+          return hit(norm((p.categories || []).map(function (c) { return c.name; }).join(' ')));
+        });
+      }
+      allLink.setAttribute('href', '/products?search=' + encodeURIComponent(q.trim()));
+      box.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      if (!matches.length) {
+        countEl.textContent = 'No results';
+        allLink.style.visibility = 'hidden';
+        fitToViewport();
+        return;
+      }
+      allLink.style.visibility = '';
+      countEl.textContent = matches.length + (matches.length > 1 ? ' results' : ' result');
+      matches.slice(0, MAX_RESULTS).forEach(function (p, i) {
+        var thumb = cutoutThumb(p);
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'vg-sr-item';
+        a.id = 'vg-sr-' + i;
+        a.setAttribute('role', 'option');
+        a.href = p.url || ('/product/' + p.permalink);
+        if (thumb) a.setAttribute('data-icon', thumb);
+        var img = document.createElement('img');
+        img.className = 'vg-sr-thumb';
+        img.alt = '';
+        img.decoding = 'async';
+        if (thumb) img.src = thumb;
+        var txt = document.createElement('span');
+        txt.className = 'vg-sr-txt';
+        var nm = document.createElement('span');
+        nm.className = 'vg-sr-name';
+        nm.textContent = (p.name || '').trim();
+        var ct = document.createElement('span');
+        ct.className = 'vg-sr-cat';
+        ct.textContent = catLabel(p);
+        txt.appendChild(nm);
+        txt.appendChild(ct);
+        var pr = document.createElement('span');
+        pr.className = 'vg-sr-price';
+        pr.textContent = price(p);
+        a.appendChild(img);
+        a.appendChild(txt);
+        a.appendChild(pr);
+        a.addEventListener('click', function (e) {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+          e.preventDefault();
+          e.stopPropagation();
+          go(a);
+        });
+        li.appendChild(a);
+        list.appendChild(li);
+        items.push(a);
+      });
+      fitToViewport();
+    }
+
+    function update() {
+      var q = input.value;
+      var id = ++reqId;
+      window.__vgProducts.then(function (products) {
+        if (id === reqId) render(q, products || []);
+      });
+    }
+
+    input.addEventListener('input', update);
+    input.addEventListener('keydown', function (e) {
+      if (box.hidden || !items.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActive(active < items.length - 1 ? active + 1 : 0);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActive(active > 0 ? active - 1 : items.length - 1);
+      } else if (e.key === 'Enter' && active > -1) {
+        e.preventDefault();
+        go(items[active]);
+      }
+    });
+    input.addEventListener('focus', function () { setTimeout(fitToViewport, 300); });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitToViewport);
+      window.visualViewport.addEventListener('scroll', fitToViewport);
+    }
+    window.addEventListener('resize', fitToViewport);
+
+    new MutationObserver(function () {
+      if (modal.getAttribute('aria-hidden') === 'false') {
+        if (input.value) update();
+      }
+    }).observe(modal, { attributes: true, attributeFilter: ['aria-hidden'] });
+  }
+
+  /* === MENU MOBILE (V1 plein ecran verre) : complements au DOM du theme === */
+  /* Barre du haut avec le logo (la croix du theme reste a droite) et pied */
+  /* de menu : recherche + panier. Le reste est du CSS sur les liens */
+  /* existants, pour que les transitions de page continuent de marcher. */
+  function setupMenu(nav) {
+    if (nav.__vgMenuReady) return;
+    nav.__vgMenuReady = true;
+    var content = nav.querySelector('.overlay_content');
+    if (!content) return;
+
+    var headerLogo = document.querySelector('.header .logo img, header .logo img, .header img.store-logo');
+    var bar = document.createElement('div');
+    bar.className = 'vg-menu-bar';
+    if (headerLogo) {
+      var logo = headerLogo.cloneNode(true);
+      logo.removeAttribute('srcset');
+      logo.alt = '';
+      bar.appendChild(logo);
+    }
+    content.insertBefore(bar, content.firstChild);
+
+    var foot = document.createElement('div');
+    foot.className = 'vg-menu-foot';
+    var sBtn = document.createElement('button');
+    sBtn.type = 'button';
+    sBtn.className = 'vg-menu-search';
+    sBtn.setAttribute('aria-label', 'Search');
+    sBtn.innerHTML = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>';
+    sBtn.addEventListener('click', function () {
+      var close = nav.querySelector('.close_overlay');
+      if (close) close.click();
+      var open = document.querySelector('.open-search-button');
+      if (open) setTimeout(function () { open.click(); }, 220);
+    });
+    foot.appendChild(sBtn);
+    var cart = document.querySelector('.header .cart-link');
+    if (cart) foot.appendChild(cart.cloneNode(true));
+    content.appendChild(foot);
+  }
+
   function init() {
     var modal = document.getElementById('search-modal');
-    if (modal) { setup(modal); return; }
-    var bodyObserver = new MutationObserver(function () {
+    var nav = document.getElementById('navigation-modal');
+    if (modal) setup(modal);
+    if (nav) setupMenu(nav);
+    if (modal && nav) return;
+    var obs = new MutationObserver(function () {
       var m = document.getElementById('search-modal');
-      if (m) { bodyObserver.disconnect(); setup(m); }
+      var n = document.getElementById('navigation-modal');
+      if (m) setup(m);
+      if (n) setupMenu(n);
+      if (m && n) obs.disconnect();
     });
-    bodyObserver.observe(document.documentElement, { childList: true, subtree: true });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
   }
+  // Ce script peut s'executer avant la fin du <body> (preload dans le
+  // <head>) : on attend que les 2 modales existent.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -506,13 +756,7 @@
   // Index 0-based dans l'ordre reel de products.json (verifie identique).
   // Exception : la pochette VGTAPE (cd-vgtape) est carree par nature, pas
   // de detourage necessaire, jamais dans cette liste.
-  var NON_CUTOUT = {
-    'custom-hoodie': [2, 3],
-    'ja_0001': [2, 3, 4],
-    'pantalon-denim-bleu': [3, 4],
-    'sacoche': [3, 4],
-    'sma_0001': [2, 3, 4]
-  };
+  var NON_CUTOUT = window.__VG_NON_CUTOUT;
 
   // Cache partage /products.json : une seule requete pour tout ce module.
   // Le Body a par ailleurs plusieurs fetch('/products.json') independants

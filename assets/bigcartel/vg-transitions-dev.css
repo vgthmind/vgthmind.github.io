@@ -84,51 +84,17 @@ html,body{overflow-x:clip !important;}
   filter:drop-shadow(0 8px 20px rgba(23,23,23,0.25)) !important;
 }
 
-/* === SECTION 6 POINT 3 : menu de recherche, verre marque + liseré chrome */
-/* (variante 2, choisie par Jules le 2026-09-26) === */
-/* IMPORTANT : ce fichier est charge via le bloc VGTHMIND colle en tete du */
-/* <head> dans la Layout (avant theme_css_url et donc avant le Custom CSS, */
-/* qui se charge lui APRES). A specificite egale (#search-modal), les */
-/* regles du Custom CSS existant gagneraient donc la cascade et ecraseraient */
-/* celles-ci. Pour eviter de devoir toucher au Custom CSS (voir consigne : */
-/* minimum de copier-coller dans BigCartel), chaque selecteur ci-dessous */
-/* est prefixe par "body" pour etre structurellement plus specifique */
-/* (0,1,1 au lieu de 0,1,0), donc toujours gagnant quel que soit l'ordre */
-/* de chargement reel. */
-/* 2 bugs reels corriges (trouves en retestant avec le vrai theme.css rendu, */
-/* tags Liquid substitues) : (1) .modal-content (la barre qui contient le */
-/* formulaire) avait un fond NOIR PLEIN via background-color:var(--background- */
-/* color), jamais surcharge nulle part -- la vraie cause de la "bande noire */
-/* opaque", independante de ce qui est mis sur #search-modal (le voile */
-/* derriere) ; (2) le vrai champ est <input type="search">, le selecteur */
-/* input[type="text"] d'origine ne le ciblait jamais. */
-/* [2026-09-26, 2e retour de Jules] 2 corrections supplementaires : */
-/* (3) plus AUCUN bleu/violet (l'ancien focus utilisait --accent, */
-/* rgba(47,63,209,...)) -- remplace par un anneau chrome/gris, qui reste */
-/* visible au clavier (focus-visible) sans jamais utiliser la couleur */
-/* d'accent bleue du site ; (4) le header devenait illisible (flou par le */
-/* backdrop-filter de #search-modal, qui passe au-dessus car le header n'a */
-/* pas de position/z-index propres dans le theme) -- remonte au-dessus du */
-/* voile via :has() pendant que le menu est ouvert, pour rester net. */
-/* [2026-09-27/28, retour video 23:46 de Jules] BUG REEL : en remontant le */
-/* header au-dessus du voile (ligne suivante), rien ne decalait le panneau */
-/* du menu en consequence -- .modal-content demarre par defaut tout en haut */
-/* de #search-modal (theme.css ne centre/decale rien verticalement), donc le */
-/* header (maintenant au-dessus de tout) recouvre exactement le champ de */
-/* recherche, illisible et probablement inutilisable. Corrige en decalant */
-/* .modal-content sous le header via --header-height (variable CSS globale */
-/* du theme, deja utilisee ailleurs dans theme.css pour ce meme calcul -- */
-/* fiable sur desktop ET mobile, s'adapte automatiquement si Jules change la */
-/* taille du logo dans les reglages BigCartel). Le header reste au-dessus du */
-/* voile (toujours utile : theme.css ne lui donne ni position ni z-index */
-/* propres, donc il serait flou/illisible derriere le fond du voile sans ce */
-/* z-index), mais ne recouvre plus jamais le panneau. */
-/* [2026-09-28, vidéo 13:58] BUG REEL : le bouton loupe du header */
-/* (.open-search-button) affiche un cercle BLEU (Custom CSS existant, */
-/* ".open-search-button:hover{border-color:var(--accent)}", jamais prevu */
-/* pour l'etat "menu ouvert") -- contraire a la consigne "aucun bleu nulle */
-/* part". Neutralise au survol ET au focus avec la meme teinte chrome que */
-/* le reste de la DA verre/chrome. */
+/* === SECTION 6 POINT 3 : panneau de recherche (V1 "carte verre", choisie */
+/* par Jules le 2026-09-28, maquette chantier/captures/etape_a/p4_v1_*) === */
+/* Ce fichier est charge dans le <head> AVANT le Custom CSS : chaque */
+/* selecteur est prefixe par "body" pour rester plus specifique que le */
+/* Custom CSS quel que soit l'ordre de chargement. */
+/* Rappels (bugs deja corriges, ne pas reintroduire) : le vrai champ est */
+/* <input type="search"> ; aucun bleu nulle part ; ne JAMAIS toucher a la */
+/* `position` du header (il est position:fixed nativement -- mesure le */
+/* 2026-09-28 -- l'ecraser le fait retomber dans le flux = bande beige), */
+/* seulement a son z-index ; .modal-content fait 1200px bord a bord sans la */
+/* largeur ci-dessous (mesure directe) -- c'est elle qui fait le panneau. */
 body .open-search-button:hover,
 body .open-search-button:focus,
 body .open-search-button:focus-visible{
@@ -136,79 +102,123 @@ body .open-search-button:focus-visible{
   background:rgba(0,0,0,0.04) !important;
   outline:none !important;
 }
-/* [2026-09-28, vidéo 13:58] BUG REEL : une bande beige vide apparaissait */
-/* au-dessus du header quand le menu est ouvert -- le header se retrouvait */
-/* decale vers le bas (~1x sa hauteur) au lieu de rester a sa place normale */
-/* en haut de la page. 2 essais infructueux (position:relative, puis */
-/* position:sticky) ont donne exactement le meme decalage dans les deux */
-/* cas -- ca ecarte un probleme lie au TYPE de position choisi. Cause reelle */
-/* la plus probable : le header est deja position:fixed en temps normal */
-/* (une classe "fixed" ajoutee par le theme, non visible dans le CSS statique */
-/* -- coherent avec header.fixed{position:fixed;top:0;left:0} deja repere */
-/* dans theme.css), avec un espace/padding quelque part au-dessus du */
-/* contenu principal pour compenser visuellement ce header flottant. */
-/* Imposer position:relative/sticky ECRASAIT ce position:fixed existant, */
-/* faisant retomber le header dans le flux normal du document -- sous cet */
-/* espace de compensation, d'ou le decalage vers le bas observe a chaque */
-/* fois. Fix : ne plus toucher a `position` du tout (laisser le theme gerer */
-/* sa propre valeur), se contenter d'ajouter le z-index. CONFIRME par */
-/* mesure directe le 2026-09-28 (getComputedStyle, diagnostic jete en */
-/* exception -- seul moyen de lire l'iframe cross-origin de l'apercu) : le */
-/* header a bien position:fixed nativement, donc ce z-index s'applique pour */
-/* de vrai (jamais un rappel de la question a garder ouverte). */
 body:has(#search-modal[aria-hidden="false"]) .header{
   z-index:1000 !important;
 }
-/* [2026-09-28, mesure directe] .modal-content n'avait ici AUCUNE largeur */
-/* propre : sans le max-width/margin ci-dessous, il fait 1200px bord a bord */
-/* (mesure via diagnostic jete en exception -- seul moyen de lire l'iframe */
-/* cross-origin de l'apercu). Le panneau visible etroit et centre qu'on voit */
-/* a l'ecran ne venait donc PAS de .modal-content, mais d'une ancienne regle */
-/* orpheline dans le Custom CSS (#search-modal .search-form{max-width:640px; */
-/* margin:0 auto;...}, un reliquat d'un style verre fonce anterieur jamais */
-/* nettoye -- a supprimer un jour de Custom CSS pour eviter ce genre de */
-/* piege). En attendant, .modal-content porte desormais sa propre largeur */
-/* pour de vrai, independamment de ce reliquat, et sert d'ancrage fiable a */
-/* position:relative pour la croix de secours (voir vg-transitions-dev.js) : */
-/* utiliser margin-left/right (jamais le raccourci `margin`, qui ecraserait */
-/* le margin-top ci-dessous). */
+body:has(#search-modal[aria-hidden="false"]) .open-search-button{
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  border-color:transparent !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22) !important;
+}
+body #search-modal{
+  background:rgba(244,242,236,0.34) !important;
+  backdrop-filter:blur(14px) saturate(115%) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(115%) !important;
+  overflow-y:auto !important;
+}
 body #search-modal .modal-content{
   position:relative !important;
-  max-width:640px !important;
+  width:auto !important;
+  max-width:620px !important;
   margin-left:auto !important;
   margin-right:auto !important;
   margin-top:calc(var(--header-height, 90px) + 16px) !important;
-  background:rgba(255,255,255,0.75) !important;
-  backdrop-filter:blur(24px) saturate(150%) !important;
-  -webkit-backdrop-filter:blur(24px) saturate(150%) !important;
-  border-bottom:3px solid transparent !important;
-  border-image:linear-gradient(90deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) 1 !important;
-  box-shadow:0 8px 28px rgba(23,23,23,0.16) !important;
+  margin-bottom:24px !important;
+  color:#171717 !important;
+  text-align:left !important;
+  border:0 !important;
+  border-radius:24px !important;
+  background:linear-gradient(158deg,rgba(255,255,255,0.72) 0%,rgba(255,255,255,0.58) 35%,rgba(255,255,255,0.52) 100%) !important;
+  backdrop-filter:blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(160%) !important;
+  box-shadow:0 30px 70px rgba(23,23,23,0.20), 0 2px 6px rgba(23,23,23,0.06), inset 0 1px 0 rgba(255,255,255,0.85) !important;
 }
-body #search-modal{
-  background:rgba(244,242,236,0.45) !important;
-  backdrop-filter:blur(10px) !important;
-  -webkit-backdrop-filter:blur(10px) !important;
-  overflow-y:auto !important;
+/* Liseré chrome (meme degrade que les pills), trace par un masque pour */
+/* garder les coins arrondis -- border-image les ignorerait. */
+body #search-modal .modal-content::before{
+  content:'' !important;
+  position:absolute !important;
+  inset:0 !important;
+  border-radius:inherit !important;
+  padding:1.5px !important;
+  background:linear-gradient(120deg,#ffffff 0%,#c7cbd0 22%,#8f939a 48%,#e4e6e8 70%,#6f7379 100%) !important;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite:xor !important;
+  mask-composite:exclude !important;
+  pointer-events:none !important;
+}
+body #search-modal .modal-content--inner{
+  overflow:visible !important;
+}
+body #search-modal .wrapper{
+  max-width:none !important;
+  padding:22px 24px 16px !important;
+  align-items:stretch !important;
+}
+@media (prefers-reduced-motion: no-preference){
+  body #search-modal[aria-hidden="false"] .modal-content{
+    animation:vg-panel-in 280ms cubic-bezier(.2,.8,.2,1) both !important;
+  }
+}
+@keyframes vg-panel-in{
+  from{opacity:0;transform:translateY(-10px) scale(.985);}
+  to{opacity:1;transform:none;}
 }
 body #search-modal .search-form{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto !important;
+  column-gap:12px !important;
+  row-gap:14px !important;
   background:transparent !important;
-  padding:32px !important;
+  padding:0 !important;
+  margin:0 !important;
+  max-width:none !important;
+  border:0 !important;
+  box-shadow:none !important;
 }
+/* Police mono / majuscules / interlettrage : reportes du Custom CSS (ancien */
+/* bloc "verre fonce" retire le 2026-09-28) pour garder l'etiquette dans la */
+/* DA du site. */
 body #search-modal label{
-  color:#3d4045 !important;
-  font-size:12px !important;
+  grid-column:1 / -1 !important;
+  grid-row:1 !important;
+  margin:4px 0 0 2px !important;
+  font-family:'IBM Plex Mono',monospace !important;
+  font-size:10.5px !important;
   font-weight:600 !important;
+  letter-spacing:0.16em !important;
+  text-transform:uppercase !important;
+  color:#8d929a !important;
+  text-align:left !important;
 }
 body #search-modal input.search-input{
-  background:rgba(255,255,255,0.85) !important;
-  border:1px solid rgba(0,0,0,0.16) !important;
+  grid-row:2 !important;
+  grid-column:1 !important;
+  height:56px !important;
+  /* 16px minimum : en dessous, iOS zoome la page au focus. */
+  font-size:16px !important;
+  font-family:'Inter',system-ui,sans-serif !important;
   color:#171717 !important;
-  border-radius:6px !important;
+  padding:0 22px 0 48px !important;
+  border-radius:999px !important;
+  border:1px solid rgba(0,0,0,0.10) !important;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238d929a' stroke-width='2.2' stroke-linecap='round'><circle cx='10.5' cy='10.5' r='6.5'/><path d='M20 20l-4.8-4.8'/></svg>") 20px 50% / 16px 16px no-repeat,
+    linear-gradient(180deg,rgba(236,237,238,0.95),rgba(255,255,255,0.92)) !important;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,0.18), inset 0 -1px 0 rgba(255,255,255,0.9), 0 1px 0 rgba(255,255,255,0.8) !important;
+  -webkit-appearance:none !important;
+  appearance:none !important;
 }
-/* La croix native "effacer" de <input type="search"> est bleutee par */
-/* defaut du navigateur -- neutralisee en croix grise/chrome via un masque */
-/* (aucune surcharge de couleur possible autrement sur cet element). */
+body #search-modal input.search-input::placeholder{
+  color:#9a9ea5 !important;
+}
+body #search-modal input.search-input:focus,
+body #search-modal input.search-input:focus-visible{
+  outline:none !important;
+  border-color:rgba(0,0,0,0.10) !important;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,0.18), inset 0 -1px 0 rgba(255,255,255,0.9), 0 0 0 3px rgba(143,147,154,0.35) !important;
+}
+/* Croix native "effacer" du champ : bleutee par defaut -- grise ici. */
 body #search-modal input.search-input::-webkit-search-cancel-button{
   -webkit-appearance:none !important;
   appearance:none !important;
@@ -223,74 +233,466 @@ body #search-modal input.search-input::-webkit-search-cancel-button{
   -webkit-mask-size:contain !important;
   mask-size:contain !important;
 }
-body #search-modal input.search-input::-webkit-search-cancel-button:hover{
-  background-color:#171717 !important;
+body #search-modal button.search-button{
+  grid-row:2 !important;
+  grid-column:2 !important;
+  width:56px !important;
+  height:56px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:50% !important;
+  color:#2f3134 !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22) !important;
 }
-/* Focus chrome/gris, jamais bleu/violet -- toujours visible au clavier. */
-body #search-modal input.search-input:focus,
-body #search-modal input.search-input:focus-visible{
-  border-color:#8f939a !important;
-  background:#fff !important;
+body #search-modal button.search-button::before{display:none !important;}
+body #search-modal button.search-button svg{
+  width:19px !important;
+  height:19px !important;
+  fill:#2f3134 !important;
+}
+body #search-modal button.search-button:focus-visible{
   outline:none !important;
-  box-shadow:0 0 0 2px rgba(143,147,154,0.45) !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22), 0 0 0 3px rgba(143,147,154,0.45) !important;
 }
-/* [2026-09-28] BUG REEL trouve en retestant l'etape a), en 2 temps : */
-/* 1) Le natif (button.close-modal) est desormais purement cache (display: */
-/*    none) plutot que traque par une detection de visibilite fragile -- */
-/*    le theme lui donne un style chrome + position:absolute dans .wrapper */
-/*    via une regle plus haut, et cette regle avait rendu le natif visible */
-/*    mais mal place, ce qui faussait toute detection "est-il visible ?". */
-/* 2) Le filet de secours JS lui-meme, ajoute sans condition dans */
-/*    .modal-content, flottait ENCORE au-dessus du header. Mesure directe */
-/*    (diagnostic jete en exception, seul moyen de lire l'iframe cross- */
-/*    origin de l'apercu) : .modal-content ET .modal-content--inner font */
-/*    1200px de large, BORD A BORD -- ce n'est PAS le panneau visible. Le */
-/*    panneau visible et centre qu'on voit a l'ecran est .wrapper (200px a */
-/*    1000px, 800px de large), qui a deja position:relative nativement */
-/*    dans le theme. Une croix en top:12/right:12 DANS .modal-content */
-/*    atterrissait donc au bord droit de la zone de 1200px (x=1154), */
-/*    largement a droite du bord droit reel du panneau (x=1000) -- d'ou la */
-/*    croix flottant hors du panneau, pres du header. Fix : filet de */
-/*    secours ajoute dans .wrapper (voir vg-transitions-dev.js), pas besoin */
-/*    de position:relative ici puisque .wrapper l'a deja par defaut. */
+/* Croix : le bouton natif est cache (il etait rendu dans .wrapper, mal */
+/* place -- et faussait toute detection de visibilite) ; la croix chromee */
+/* est ajoutee par vg-transitions-dev.js dans .modal-content, alignee sur */
+/* la ligne de l'etiquette "Search". */
 body #search-modal button.close-modal{
   display:none !important;
 }
 body #search-modal .vg-search-close-fallback{
   position:absolute !important;
-  top:12px !important;
-  right:12px !important;
+  top:14px !important;
+  right:18px !important;
   z-index:10 !important;
   display:flex !important;
   align-items:center !important;
   justify-content:center !important;
   visibility:visible !important;
   opacity:1 !important;
-  color:#3d4045 !important;
-  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
-  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
-  border-radius:50% !important;
   width:34px !important;
   height:34px !important;
   padding:0 !important;
   border:none !important;
+  border-radius:50% !important;
   cursor:pointer !important;
-}
-body #search-modal .vg-search-close-fallback:hover,
-body #search-modal .vg-search-close-fallback:focus-visible{
-  color:#171717 !important;
-  filter:brightness(1.08) !important;
-  outline:none !important;
-  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
-}
-body #search-modal button.search-button{
+  color:#2f3134 !important;
   background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
-  border-radius:8px !important;
-  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 6px rgba(0,0,0,0.25) !important;
 }
-body #search-modal button.search-button:focus-visible{
+body #search-modal .vg-search-close-fallback:focus-visible{
   outline:none !important;
-  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
+  box-shadow:0 2px 0 #6f7379, 0 3px 6px rgba(0,0,0,0.25), 0 0 0 3px rgba(143,147,154,0.45) !important;
+}
+@media (hover:hover){
+  body #search-modal .vg-search-close-fallback:hover{filter:brightness(1.08) !important;}
+}
+
+/* --- Resultats en direct (construits par vg-transitions-dev.js) --- */
+body #search-modal .vg-sr{
+  margin-top:16px;
+  border-top:1px solid rgba(0,0,0,0.08);
+  padding-top:10px;
+}
+body #search-modal .vg-sr[hidden]{display:none !important;}
+body #search-modal .vg-sr-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:0 4px 6px;
+}
+body #search-modal .vg-sr-count,
+body #search-modal .vg-sr-empty{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:#8d929a;
+}
+body #search-modal .vg-sr-empty{display:block;padding:10px 4px 6px;}
+body #search-modal a.vg-sr-all{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:#2b2c2e;
+  text-decoration:none;
+  border-bottom:1px solid rgba(0,0,0,0.3);
+  padding:6px 0 1px;
+}
+body #search-modal .vg-sr-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+body #search-modal a.vg-sr-item{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr) auto;
+  align-items:center;
+  gap:16px;
+  padding:8px 10px;
+  border-radius:16px;
+  color:#171717;
+  text-decoration:none;
+  transition:background-color .15s ease, box-shadow .15s ease;
+}
+body #search-modal a.vg-sr-item.is-active{
+  background:rgba(255,255,255,0.72);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
+}
+@media (hover:hover){
+  body #search-modal a.vg-sr-item:hover{
+    background:rgba(255,255,255,0.72);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
+  }
+}
+body #search-modal a.vg-sr-item:focus-visible{
+  outline:none;
+  box-shadow:inset 0 0 0 2px rgba(143,147,154,0.6);
+}
+body #search-modal .vg-sr-thumb{
+  width:72px;
+  height:72px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 12px rgba(23,23,23,0.22));
+}
+body #search-modal .vg-sr-txt{display:flex;flex-direction:column;gap:3px;min-width:0;}
+body #search-modal .vg-sr-name{
+  font-family:'Space Grotesk','Inter',sans-serif;
+  font-weight:600;
+  font-size:15px;
+  line-height:1.25;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body #search-modal .vg-sr-cat{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:9.5px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:#8d929a;
+}
+body #search-modal .vg-sr-price{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  font-weight:500;
+  color:#44474c;
+  white-space:nowrap;
+}
+body #search-modal .vg-sr-hint{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+  padding:0 4px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.06em;
+  color:#8d929a;
+}
+body #search-modal .vg-sr-hint kbd{
+  display:inline-block;
+  padding:1px 6px;
+  margin-right:4px;
+  border-radius:5px;
+  border:1px solid rgba(0,0,0,0.14);
+  background:rgba(255,255,255,0.6);
+  font-family:inherit;
+  font-size:9.5px;
+  color:#55585d;
+}
+/* Pas de clavier physique sur ecran tactile : les raccourcis n'ont pas de */
+/* sens, on les masque. */
+@media (hover:none), (pointer:coarse){
+  body #search-modal .vg-sr-hint{display:none;}
+}
+@media screen and (max-width:640px){
+  body #search-modal .modal-content{
+    max-width:none !important;
+    margin-left:12px !important;
+    margin-right:12px !important;
+    margin-top:calc(var(--header-height, 66px) + 12px) !important;
+    border-radius:22px !important;
+  }
+  body #search-modal .wrapper{padding:16px 16px 14px !important;}
+  body #search-modal .search-form{column-gap:10px !important;row-gap:12px !important;}
+  body #search-modal input.search-input{height:50px !important;padding-left:44px !important;background-position:18px 50%, 0 0 !important;}
+  body #search-modal button.search-button{width:50px !important;height:50px !important;}
+  body #search-modal .vg-search-close-fallback{top:10px !important;right:12px !important;width:32px !important;height:32px !important;}
+  body #search-modal a.vg-sr-item{grid-template-columns:62px minmax(0,1fr);column-gap:12px;row-gap:3px;padding:7px 6px;}
+  body #search-modal .vg-sr-thumb{width:62px;height:62px;grid-row:1 / span 2;}
+  body #search-modal .vg-sr-txt{align-self:end;}
+  body #search-modal .vg-sr-name{font-size:14px;}
+  body #search-modal .vg-sr-price{grid-column:2;grid-row:2;align-self:start;font-size:11.5px;}
+}
+
+/* === MENU MOBILE (V1 "plein ecran verre", categories en grille 2 colonnes */
+/* comme la V2 -- choix de Jules le 2026-09-28, maquette p5_v1) === */
+/* Structure du theme : #navigation-modal > .overlay_background + */
+/* .overlay_content > button.close_overlay + nav.primary_navigation > */
+/* ul.page_list--main (Home, Products) + ul.page_list--categories + */
+/* ul.page_list--pages + ul.page_list--social_links. On restyle ces liens */
+/* existants plutot que de les recreer : les transitions de page (qui */
+/* ecoutent "nav.primary_navigation .page_list a") continuent de marcher. */
+body .open-mobile-navigation{
+  align-items:center !important;
+  gap:8px !important;
+  height:38px !important;
+  padding:0 14px 0 12px !important;
+  border:0 !important;
+  border-radius:999px !important;
+  color:#232426 !important;
+  opacity:1 !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22) !important;
+}
+body .open-mobile-navigation svg{
+  width:15px !important;
+  height:11px !important;
+  fill:#232426 !important;
+}
+body .open-mobile-navigation::after{
+  content:'MENU';
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:0.14em;
+  line-height:1;
+}
+body .open-mobile-navigation:focus-visible{
+  outline:none !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22), 0 0 0 3px rgba(143,147,154,0.45) !important;
+}
+body #navigation-modal{
+  text-align:left !important;
+}
+/* Verre volontairement peu couvrant (demande de Jules) : la page floutee */
+/* doit se deviner derriere. */
+body #navigation-modal .overlay_background{
+  background:rgba(244,242,236,0.40) !important;
+  backdrop-filter:blur(16px) saturate(135%) !important;
+  -webkit-backdrop-filter:blur(16px) saturate(135%) !important;
+}
+body #navigation-modal .overlay_background::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(160deg,rgba(255,255,255,0.45) 0%,rgba(255,255,255,0) 40%);
+}
+body #navigation-modal .overlay_content{
+  position:relative !important;
+  padding:0 18px 28px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  min-height:100% !important;
+}
+@media (prefers-reduced-motion: no-preference){
+  body #navigation-modal[aria-hidden="false"] .overlay_content{
+    animation:vg-menu-in 300ms cubic-bezier(.2,.8,.2,1) both;
+  }
+}
+@keyframes vg-menu-in{
+  from{opacity:0;transform:translateY(-12px);}
+  to{opacity:1;transform:none;}
+}
+body #navigation-modal .vg-menu-bar{
+  height:66px;
+  display:flex;
+  align-items:center;
+  flex:none;
+}
+body #navigation-modal .vg-menu-bar img{
+  height:26px;
+  width:auto;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+body #navigation-modal .close_overlay{
+  top:13px !important;
+  right:16px !important;
+  width:40px !important;
+  height:40px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:50% !important;
+  color:#2f3134 !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22) !important;
+  z-index:2 !important;
+}
+body #navigation-modal .close_overlay svg{width:14px !important;height:14px !important;fill:#2f3134 !important;}
+body #navigation-modal .close_overlay:focus-visible{
+  outline:none !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 8px rgba(0,0,0,0.22), 0 0 0 3px rgba(143,147,154,0.45) !important;
+}
+body #navigation-modal .primary_navigation{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:0 !important;
+  justify-content:flex-start !important;
+  flex:1 !important;
+  padding-top:14px !important;
+}
+body #navigation-modal .page_list{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  list-style:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  gap:12px !important;
+}
+body #navigation-modal .page_list li{display:block !important;margin:0 !important;max-width:none !important;}
+body #navigation-modal .page_list--main::before,
+body #navigation-modal .page_list--categories::before{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:#8d929a;
+  margin:0 0 0 4px;
+}
+body #navigation-modal .page_list--main::before{content:'Pages';}
+body #navigation-modal .page_list--categories::before{content:'Categories';grid-column:1 / -1;margin-bottom:0;}
+/* "Pages" = Products (page_list--main) puis les pages (page_list--pages), */
+/* sans espace visible entre les 2 listes. */
+body #navigation-modal .page_list--pages{margin-top:12px !important;order:1;}
+body #navigation-modal .page_list--main{order:0;}
+body #navigation-modal .page_list--categories{order:2;margin-top:26px !important;}
+body #navigation-modal .page_list--social_links{order:3;}
+/* Accueil : le logo y mene deja ; "All" doublonne Products. */
+body #navigation-modal .page_list li:has(> a[href="/"]),
+body #navigation-modal .page_list--categories li:has(> a[href$="/category/all"]){
+  display:none !important;
+}
+body #navigation-modal .page_list--main li a,
+body #navigation-modal .page_list--pages li a{
+  display:flex !important;
+  align-items:center !important;
+  gap:14px !important;
+  min-height:62px !important;
+  padding:0 44px 0 16px !important;
+  position:relative !important;
+  border-radius:18px !important;
+  font-family:'IBM Plex Mono',monospace !important;
+  font-size:14px !important;
+  font-weight:600 !important;
+  letter-spacing:0.14em !important;
+  text-transform:uppercase !important;
+  text-decoration:none !important;
+  color:#1f2022 !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 3px 0 #6f7379, 0 8px 18px rgba(0,0,0,0.16) !important;
+}
+/* Icone de transition de chaque page (memes fichiers que l'animation). */
+body #navigation-modal .page_list li a[href="/products"]::before,
+body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before,
+body #navigation-modal .page_list li a[href="/contact"]::before{
+  content:'';
+  flex:none;
+  width:40px;
+  height:40px;
+  background:center / contain no-repeat;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+}
+body #navigation-modal .page_list li a[href="/products"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/products-icon.png");}
+body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/info-icon.png");}
+body #navigation-modal .page_list li a[href="/contact"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/contact-icon.png");}
+body #navigation-modal .page_list--main li a::after,
+body #navigation-modal .page_list--pages li a::after{
+  content:'';
+  position:absolute;
+  right:18px;
+  top:50%;
+  width:10px;
+  height:16px;
+  margin-top:-8px;
+  opacity:.6;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='16' viewBox='0 0 10 16'><path d='M2 2l6 6-6 6' stroke='%231f2022' stroke-width='2.2' fill='none' stroke-linecap='round'/></svg>") center / contain no-repeat;
+}
+body #navigation-modal .page_list li a:focus-visible{
+  outline:none !important;
+  box-shadow:0 3px 0 #6f7379, 0 8px 18px rgba(0,0,0,0.16), 0 0 0 3px rgba(143,147,154,0.5) !important;
+}
+@media (hover:hover){
+  body #navigation-modal .page_list li a:hover{filter:brightness(1.05) !important;text-decoration:none !important;}
+}
+body #navigation-modal .page_list--categories{
+  display:grid !important;
+  grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+  gap:8px !important;
+}
+body #navigation-modal .page_list--categories::before{margin-bottom:4px;}
+body #navigation-modal .page_list--categories li a{
+  display:block !important;
+  text-align:center !important;
+  padding:11px 6px !important;
+  border-radius:8px !important;
+  font-family:'IBM Plex Mono',monospace !important;
+  font-size:10.5px !important;
+  font-weight:500 !important;
+  letter-spacing:0.07em !important;
+  text-transform:uppercase !important;
+  text-decoration:none !important;
+  color:#2b2c2e !important;
+  background:linear-gradient(180deg,#fbfbfa,#e2e2de) !important;
+  border:1px solid rgba(0,0,0,0.13) !important;
+  box-shadow:0 2px 0 rgba(0,0,0,0.28) !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+body #navigation-modal .page_list--social_links{
+  flex-direction:row !important;
+  justify-content:center !important;
+  gap:10px !important;
+  max-width:none !important;
+  padding:26px 0 0 !important;
+}
+body #navigation-modal .page_list--social_links a{
+  width:44px !important;
+  height:44px !important;
+  padding:11px !important;
+  border-radius:50% !important;
+  border:1px solid rgba(0,0,0,0.14) !important;
+  background:rgba(255,255,255,0.35) !important;
+  color:#3d4045 !important;
+  box-shadow:none !important;
+  min-height:0 !important;
+}
+body #navigation-modal .page_list--social_links a::before,
+body #navigation-modal .page_list--social_links a::after{display:none !important;}
+/* Pied du menu (ajoute par vg-transitions-dev.js) : recherche + panier. */
+body #navigation-modal .vg-menu-foot{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:auto;
+  padding-top:24px;
+}
+body #navigation-modal .vg-menu-foot .vg-menu-search{
+  flex:none;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  border:1px solid rgba(0,0,0,0.14);
+  background:rgba(255,255,255,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#3d4045;
+  padding:0;
+  cursor:pointer;
+}
+body #navigation-modal .vg-menu-foot .cart-link{
+  flex:1;
+  justify-content:center;
 }
 
 /* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
