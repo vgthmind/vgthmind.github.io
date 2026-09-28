@@ -924,6 +924,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     box.style.left = cx + 'px';
     box.style.top = cy + 'px';
     box.style.setProperty('--vg-pop-s0', String(s0));
+    VGDBG('size=' + Math.round(size) + ' s0=' + s0.toFixed(2) + ' win=' + window.innerWidth + 'x' + window.innerHeight + ' c=' + Math.round(cx) + ',' + Math.round(cy) + ' vis=' + document.visibilityState);
     var ia = document.createElement('img');
     ia.className = 'vg-pop-img vg-pop-a';
     ia.alt = '';
@@ -940,6 +941,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
         if (current !== state) return;
         box.classList.add('is-open');
         state.opened = true;
+        VGDBG('isopen tf=' + getComputedStyle(box).transform + ' conn=' + box.isConnected);
         if (state.ib) scheduleSwap(state, 140);
       });
     });
@@ -1047,6 +1049,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 
   document.addEventListener('pointerout', function (e) {
     var to = e.relatedTarget;
+    if (current) VGDBG('out to=' + (to ? to.tagName + '.' + to.className : 'null'));
     if (overEl && (!to || !overEl.contains(to))) overEl = null;
     if (!current) return;
     if (to && current.el.contains(to)) return;
