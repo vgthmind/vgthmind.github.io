@@ -701,6 +701,108 @@ body #navigation-modal .vg-menu-foot .cart-link *{
   opacity:1 !important;
 }
 
+/* === SECTIONS 4 ET 5 : pop au survol (voir vg-transitions-dev.js) === */
+/* Superposition position:fixed, taille identique pour tous, au-dessus du */
+/* header (sous l'overlay des transitions de page), jamais coupee. */
+.vg-pop{
+  position:fixed !important;
+  z-index:2147483000 !important;
+  pointer-events:none !important;
+  transform:translate(-50%,-50%) scale(var(--vg-pop-s0,0.5)) !important;
+  transition:transform 260ms cubic-bezier(.34,1.45,.64,1) !important;
+  will-change:transform !important;
+}
+.vg-pop.is-open{
+  transform:translate(-50%,-50%) scale(1) !important;
+}
+.vg-pop-img{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  object-fit:contain !important;
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  filter:drop-shadow(0 18px 26px rgba(23,23,23,0.28)) !important;
+  transition:opacity 200ms ease !important;
+}
+.vg-pop-b{opacity:0 !important;}
+.vg-pop.is-swapped .vg-pop-a{opacity:0 !important;}
+.vg-pop.is-swapped .vg-pop-b{opacity:1 !important;}
+/* Image d'origine masquee pendant le pop : une seule image visible. */
+body .vg-pop-hidden{
+  opacity:0 !important;
+  transition:none !important;
+}
+
+/* Neutralise les anciens effets de survol produit du Custom CSS et du */
+/* Body (grossissement en flux, rotation, pseudo-element, decalage). */
+/* L'effet gris/flou sur les AUTRES produits de la grille est garde. */
+body .product-list-link:hover{
+  transform:none !important;
+}
+body .product-list-link:hover .product-list-image-container img,
+body .product-list-link:hover .product-list-image-container img:not(.vg-hover-swap){
+  width:100% !important;
+  max-width:100% !important;
+  transform:none !important;
+}
+body .product-list-link:hover .product-list-image-container::after{
+  display:none !important;
+}
+body .vg-hover-swap{display:none !important;}
+
+/* Section 4 : tuiles de l'accueil. La 2e image (.vg-category-tile-img-alt) */
+/* ne sert plus qu'a fournir son URL au pop : jamais affichee dans la tuile */
+/* (c'etait elle, en fondu par-dessus la base, qui faisait le fantome). */
+body .vg-category-tile-img-alt{display:none !important;}
+body .vg-category-tile:hover .vg-category-tile-img{transform:none !important;}
+body .vg-category-tile,
+body .vg-category-tile:hover{overflow:visible !important;}
+/* Labels SOUS l'image, lisibles (plus par-dessus le vetement). */
+body .vg-category-tile .vg-category-tile-img{bottom:30px !important;}
+body .vg-category-tile .vg-category-tile-label{
+  top:auto !important;
+  bottom:0 !important;
+  padding:0 4px !important;
+  height:24px !important;
+  line-height:24px !important;
+  text-align:center !important;
+  color:#2b2c2e !important;
+  text-shadow:none !important;
+  font-family:'IBM Plex Mono',monospace !important;
+  font-size:11px !important;
+  letter-spacing:0.1em !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+/* Latest Drop : toujours mis en avant au repos, mais ~1,4x les autres au */
+/* lieu d'une tuile de 640px. */
+body .vg-category-tile.vg-tile-featured{
+  max-width:290px !important;
+  aspect-ratio:1/1 !important;
+  max-height:none !important;
+  margin:28px auto 18px !important;
+}
+@media (max-width:640px){
+  body .vg-category-tile.vg-tile-featured{
+    flex:0 1 70% !important;
+    max-width:70% !important;
+  }
+}
+
+/* Section 5b : fiche produit, l'image principale n'est jamais plus haute */
+/* que la fenetre moins le header (sinon son haut passe sous le header). */
+body .product-images img{
+  max-height:calc(100vh - var(--header-height, 90px) - 40px) !important;
+}
+body .product-images{
+  scroll-margin-top:calc(var(--header-height, 90px) + 16px) !important;
+}
+
 /* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
 /* Le Custom CSS actuel affiche TOUTE .vg-splash-video des que .vg-splash- */
 /* -playing est present (une seule video etait prevue a l'origine). Avec */
