@@ -304,6 +304,64 @@
   setTimeout(stripHeaderTitles, 1500);
 })();
 
+/* === SECTION 6 POINT 3 (suite) : filet de securite pour la croix de */
+/* fermeture du menu de recherche === */
+/* [2026-09-28] BUG REEL trouve en testant l'etape a) sur le vrai brouillon : */
+/* le bouton natif du theme (button.close-modal, avec data-dismiss="modal") */
+/* ne s'affiche jamais, meme avec une regle CSS position:fixed + */
+/* visibility:visible + opacity:1 forcees dessus -- signe que l'element */
+/* n'est tout simplement pas rendu visible dans cet environnement, pas un */
+/* probleme de calque/couleur. Plutot que de dependre d'un bouton que le */
+/* theme ne montre pas de maniere fiable, on ajoute une croix de secours */
+/* injectee par JS, seulement si le bouton natif est absent OU a une taille */
+/* nulle a l'ouverture -- jamais en double si le natif venait a fonctionner */
+/* (ex. sur un environnement different de cet aperçu d'editeur). */
+(function () {
+  var modal = document.getElementById('search-modal');
+  if (!modal) return;
+
+  function closeSearch() {
+    // Reutilise le chemin de fermeture deja valide (Echap) plutot que de
+    // manipuler aria-hidden/scroll-lock a la main et risquer un etat
+    // incoherent avec ce que gere le theme en interne.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
+  }
+
+  function ensureFallbackClose() {
+    var wrapper = modal.querySelector('.wrapper');
+    if (!wrapper) return;
+    var native = modal.querySelector('button.close-modal');
+    var nativeVisible = native && native.getBoundingClientRect().width > 0;
+    var fallback = modal.querySelector('.vg-search-close-fallback');
+    if (nativeVisible) {
+      if (fallback) fallback.remove();
+      return;
+    }
+    if (fallback) return;
+    fallback = document.createElement('button');
+    fallback.type = 'button';
+    fallback.className = 'vg-search-close-fallback';
+    fallback.setAttribute('aria-label', 'Close search dialog');
+    fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+    fallback.addEventListener('click', closeSearch);
+    wrapper.appendChild(fallback);
+  }
+
+  var mo = new MutationObserver(function (mutList) {
+    mutList.forEach(function (m) {
+      if (m.attributeName === 'aria-hidden') {
+        if (modal.getAttribute('aria-hidden') === 'false') {
+          // Le natif (s'il existe un jour) doit avoir le temps de se
+          // mettre en page avant qu'on juge sa largeur.
+          setTimeout(ensureFallbackClose, 50);
+        }
+      }
+    });
+  });
+  mo.observe(modal, { attributes: true });
+  if (modal.getAttribute('aria-hidden') === 'false') setTimeout(ensureFallbackClose, 50);
+})();
+
 /* === SECTION 6 POINT 2 : sequence splash -> accueil (2 clips) === */
 /* Reprend a l'identique le script auparavant colle dans le Body (meme */
 /* logo, meme flag sessionStorage 'vg-splash-seen', meme tirage aleatoire */
