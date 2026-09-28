@@ -222,6 +222,19 @@ body #search-modal button.search-button{
   border-radius:8px !important;
   box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
 }
+/* [DEBUG TEMPORAIRE 2026-09-28, a retirer] test de visibilite forcee du */
+/* bouton close-modal, sans dependre de #search-modal/.wrapper pour isoler */
+/* si l'element existe vraiment dans le DOM du brouillon reel. */
+button.close-modal{
+  position:fixed !important;
+  top:100px !important;
+  left:100px !important;
+  width:100px !important;
+  height:100px !important;
+  background:red !important;
+  z-index:2147483647 !important;
+  display:block !important;
+}
 body #search-modal button.search-button:focus-visible{
   outline:none !important;
   box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(143,147,154,0.45) !important;
