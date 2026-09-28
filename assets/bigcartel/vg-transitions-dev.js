@@ -1011,6 +1011,10 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     overEl = el;
     if (current && el === current.el) return;
     if (current) close(false);
+    tryOpen(el);
+  }, true);
+
+  function tryOpen(el) {
     if (!el || window.__vgTransitioning) return;
     // Fiche produit : seulement l'image principale, pas les vignettes.
     if (!el.classList.contains('product-list-link') && !el.classList.contains('vg-category-tile') && el.closest('.product-thumbnails, .thumb-scroller')) return;
@@ -1025,7 +1029,15 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
         if (d2 && d2.b) addSecond(current, d2.b);
       });
     }
-  }, true);
+  }
+
+  // Le pop se ferme au defilement ; si la souris est restee sur la meme
+  // vignette, aucun pointerover ne repart : le moindre mouvement le rouvre.
+  document.addEventListener('pointermove', function (e) {
+    if (current || !overEl) return;
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    tryOpen(overEl);
+  }, { passive: true, capture: true });
 
   document.addEventListener('pointerout', function (e) {
     var to = e.relatedTarget;
@@ -1038,7 +1050,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 
   // Au clic (section 3 / navigation), le pop disparait immediatement : la
   // transition doit partir de la vignette au repos.
-  document.addEventListener('click', function () { close(true); }, true);
+  document.addEventListener('click', function () { overEl = null; close(true); }, true);
   window.addEventListener('scroll', function () { close(true); }, { passive: true });
   window.addEventListener('blur', function () { close(true); });
 })();
