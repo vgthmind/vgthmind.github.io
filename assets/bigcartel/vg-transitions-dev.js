@@ -306,16 +306,18 @@
 
 /* === SECTION 6 POINT 3 (suite) : filet de securite pour la croix de */
 /* fermeture du menu de recherche === */
-/* [2026-09-28] BUG REEL trouve en testant l'etape a) sur le vrai brouillon : */
-/* le bouton natif du theme (button.close-modal, avec data-dismiss="modal") */
-/* ne s'affiche jamais, meme avec une regle CSS position:fixed + */
-/* visibility:visible + opacity:1 forcees dessus -- signe que l'element */
-/* n'est tout simplement pas rendu visible dans cet environnement, pas un */
-/* probleme de calque/couleur. Plutot que de dependre d'un bouton que le */
-/* theme ne montre pas de maniere fiable, on ajoute une croix de secours */
-/* injectee par JS, seulement si le bouton natif est absent OU a une taille */
-/* nulle a l'ouverture -- jamais en double si le natif venait a fonctionner */
-/* (ex. sur un environnement different de cet aperçu d'editeur). */
+/* [2026-09-28, retest etape a)] BUG REEL trouve (signale par vgthmind) : la */
+/* croix qui flottait au-dessus du header n'etait pas le filet de secours -- */
+/* c'etait le bouton NATIF du theme (button.close-modal), auquel une regle */
+/* CSS donnait le style chrome + position:absolute, mais a l'interieur de */
+/* .wrapper (son vrai parent), qui demarre plus haut que .modal-content */
+/* (decale par le margin-top plus haut dans le CSS). isReallyVisible() le */
+/* jugeait donc "visible" a raison (il l'est, juste au mauvais endroit), et */
+/* ne creait jamais le vrai filet de secours dans .modal-content. Plutot que */
+/* de dependre d'une detection de visibilite fragile, le natif est */
+/* desormais cache purement en CSS (display:none, voir vg-transitions-dev.css) */
+/* et le filet de secours est ajoute SANS CONDITION dans .modal-content -- */
+/* une seule croix possible, toujours au bon endroit. */
 (function () {
   function closeSearch() {
     // Reutilise le chemin de fermeture deja valide (Echap) plutot que de
@@ -324,71 +326,22 @@
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
   }
 
-  // getBoundingClientRect() reste non-nul meme quand un ancetre le decoupe
-  // via overflow:hidden (c'est exactement ce qui se passait ici : le
-  // bouton natif a une taille non nulle mais est invisible/inclique -- un
-  // simple test de largeur croyait donc a tort qu'il etait affiche, et ne
-  // creait jamais la croix de secours). Verifie plutot que le CENTRE du
-  // bouton peint bien CE bouton (ou un de ses enfants, ex. le svg) au sens
-  // du rendu reel de la page.
-  function isReallyVisible(el) {
-    if (!el) return false;
-    var r = el.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) return false;
-    var top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return !!top && (top === el || el.contains(top));
-  }
-
   function setup(modal) {
-    function ensureFallbackClose() {
-      var native = modal.querySelector('button.close-modal');
-      var fallback = modal.querySelector('.vg-search-close-fallback');
-      if (isReallyVisible(native)) {
-        if (fallback) fallback.remove();
-        return;
-      }
-      if (fallback) return;
-      fallback = document.createElement('button');
-      fallback.type = 'button';
-      fallback.className = 'vg-search-close-fallback';
-      fallback.setAttribute('aria-label', 'Close search dialog');
-      fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
-      fallback.addEventListener('click', closeSearch);
-      // [2026-09-28, vidéo 13:58] Ajoutee en position:fixed ancree au viewport,
-      // la 1re version de cette croix de secours restait invisible pendant
-      // TOUTE l'ouverture du menu et n'apparaissait qu'au moment du fondu de
-      // fermeture. Cause reelle (signalee par vgthmind apres analyse image par
-      // image) : #search-modal et .header sont deux contextes d'empilement
-      // SEPARES (chacun position+z-index propres) et SIBLINGS dans le DOM --
-      // un z-index eleve a l'INTERIEUR de #search-modal ne compte que dans
-      // CE contexte ; c'est le z-index de #search-modal LUI-MEME (999, non
-      // modifiable sans casser le theme) qui est compare a celui du header
-      // (1000, ajoute pour qu'il reste net) -- le header gagne donc et peint
-      // par-dessus TOUT le contenu de #search-modal, croix de secours
-      // comprise, tant que le menu est ouvert. A la fermeture, l'attribut
-      // aria-hidden change avant la fin du fondu CSS : le header retombe
-      // aussitot a son z-index normal, ce qui laisse furtivement voir la
-      // croix pendant les ~200ms de transition -- exactement ce que vgthmind a
-      // vu. Fix : ajoutee DANS .modal-content (position:relative, propre a
-      // ce fichier) plutot que sur #search-modal -- elle n'a alors plus a
-      // rivaliser avec le header, juste avec le contenu du panneau lui-meme.
-      var panel = modal.querySelector('.modal-content');
-      (panel || modal).appendChild(fallback);
-    }
-
-    var mo = new MutationObserver(function (mutList) {
-      mutList.forEach(function (m) {
-        if (m.attributeName === 'aria-hidden') {
-          if (modal.getAttribute('aria-hidden') === 'false') {
-            // Le natif (s'il existe un jour) doit avoir le temps de se
-            // mettre en page avant qu'on juge sa largeur.
-            setTimeout(ensureFallbackClose, 50);
-          }
-        }
-      });
-    });
-    mo.observe(modal, { attributes: true });
-    if (modal.getAttribute('aria-hidden') === 'false') setTimeout(ensureFallbackClose, 50);
+    if (modal.querySelector('.vg-search-close-fallback')) return;
+    var fallback = document.createElement('button');
+    fallback.type = 'button';
+    fallback.className = 'vg-search-close-fallback';
+    fallback.setAttribute('aria-label', 'Close search dialog');
+    fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+    fallback.addEventListener('click', closeSearch);
+    // Ajoutee DANS .modal-content (position:relative, propre a ce fichier)
+    // plutot que sur #search-modal : #search-modal (z-index 999, theme) et
+    // .header (z-index 1000, ajoute par nous) sont deux contextes
+    // d'empilement separes et siblings dans le DOM -- un z-index eleve a
+    // l'interieur de #search-modal ne compte que localement. Dans
+    // .modal-content, la croix n'a plus a rivaliser avec le header du tout.
+    var panel = modal.querySelector('.modal-content');
+    (panel || modal).appendChild(fallback);
   }
 
   // [2026-09-28] BUG REEL trouve en testant l'etape a) : ce module entier ne
@@ -413,6 +366,39 @@
   } else {
     init();
   }
+})();
+
+/* === DIAGNOSTIC TEMPORAIRE (2026-09-28, retest etape a)) === */
+/* A retirer une fois la question du header (z-index sans position) */
+/* tranchee par les faits -- demande explicite de vgthmind, ne pas laisser */
+/* traine. Log une seule fois, a la premiere ouverture du menu. */
+(function () {
+  var modal = document.getElementById('search-modal');
+  if (!modal) return;
+  var logged = false;
+  function info(el) {
+    if (!el) return null;
+    var cs = getComputedStyle(el);
+    var r = el.getBoundingClientRect();
+    return {
+      tag: el.tagName, cls: el.className, display: cs.display,
+      position: cs.position, zIndex: cs.zIndex,
+      rect: { top: r.top, left: r.left, width: r.width, height: r.height },
+      parentCls: el.parentElement ? el.parentElement.className : null
+    };
+  }
+  function logOnce() {
+    if (logged) return;
+    logged = true;
+    var header = document.querySelector('.header');
+    console.log('[vg-debug] header', header ? { position: getComputedStyle(header).position, zIndex: getComputedStyle(header).zIndex, cls: header.className } : null);
+    console.log('[vg-debug] native close-modal', info(modal.querySelector('button.close-modal')));
+    console.log('[vg-debug] fallback close', info(modal.querySelector('.vg-search-close-fallback')));
+  }
+  var mo = new MutationObserver(function () {
+    if (modal.getAttribute('aria-hidden') === 'false') setTimeout(logOnce, 80);
+  });
+  mo.observe(modal, { attributes: true });
 })();
 
 /* === SECTION 6 POINT 2 : sequence splash -> accueil (2 clips) === */

@@ -215,64 +215,25 @@ body #search-modal input.search-input:focus-visible{
   outline:none !important;
   box-shadow:0 0 0 2px rgba(143,147,154,0.45) !important;
 }
-/* [2026-09-28] BUG REEL trouve en testant l'etape a) (croix de fermeture */
-/* jamais visible dans le brouillon reel, alors que tout le monde -- y */
-/* compris les validations precedentes -- ne parlait que de la petite croix */
-/* "effacer" native du champ, jamais de ce bouton-la). Cause probable : */
-/* .close-modal est premier enfant de .wrapper (display:flex column), */
-/* pousse a droite par un margin-left:auto herite du theme -- fragile et */
-/* invisible en pratique. Repositionne en absolu dans le coin haut-droit de */
-/* .wrapper (deja position:relative dans theme.css), sorti du flux flex, */
-/* avec visibilite forcee en filet de securite. */
-/* [2026-09-28] Le bouton natif close-modal ne se rendait jamais visible sur */
-/* le vrai brouillon, meme force en CSS (position:fixed + visibility:visible */
-/* + opacity:1 directement dessus, toujours invisible -- signe que l'element */
-/* n'existe pas dans ce rendu, pas un probleme de calque/couleur). Filet de */
-/* securite JS ajoute dans vg-transitions-dev.js : injecte une */
-/* .vg-search-close-fallback si le natif est absent/invisible a l'ouverture. */
-/* Meme habillage visuel applique aux deux (le natif, au cas ou il se */
-/* mettrait a fonctionner un jour ailleurs, et le filet de secours). */
+/* [2026-09-28] BUG REEL trouve en retestant l'etape a) : la croix qu'on */
+/* voyait flotter au-dessus du header (jamais dans le panneau, malgre les */
+/* correctifs precedents) N'ETAIT PAS le filet de secours JS -- c'etait le */
+/* bouton NATIF du theme (button.close-modal) lui-meme, avec le style chrome */
+/* de la regle ci-dessous applique dessus, mais positionne en absolu dans */
+/* .wrapper (son vrai parent, deja position:relative dans theme.css) et non */
+/* dans .modal-content -- .wrapper demarre plus haut que .modal-content */
+/* (qui a le margin-top ci-dessus), d'ou la croix flottant au-dessus du */
+/* panneau/pres du header. isReallyVisible() (cote JS) le jugeait "visible" */
+/* a raison (il l'est, juste au mauvais endroit) et n'ajoutait donc jamais */
+/* le vrai filet de secours dans .modal-content. Plutot que de dependre */
+/* d'une detection de visibilite fragile, on prend maintenant le controle */
+/* total : le natif est purement et simplement cache, et le filet de */
+/* secours (voir vg-transitions-dev.js) est TOUJOURS ajoute dans */
+/* .modal-content, sans condition -- une seule croix possible, toujours au */
+/* bon endroit. */
 body #search-modal button.close-modal{
-  position:absolute !important;
-  top:12px !important;
-  right:12px !important;
-  z-index:10 !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  visibility:visible !important;
-  opacity:1 !important;
-  color:#3d4045 !important;
-  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
-  box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
-  border-radius:50% !important;
-  width:34px !important;
-  height:34px !important;
-  padding:0 !important;
-  border:none !important;
-  cursor:pointer !important;
+  display:none !important;
 }
-/* [2026-09-28, vidéo 13:58] BUG REEL (analyse image par image de vgthmind) : */
-/* la 1re version de cette croix (position:fixed, ancree au viewport) etait */
-/* invisible pendant TOUTE l'ouverture du menu, et n'apparaissait que */
-/* furtivement pendant le fondu de fermeture. Vraie cause : #search-modal */
-/* (z-index:999, du theme) et .header (z-index:1000, ajoute par nous pour */
-/* qu'il reste net au-dessus du voile) sont deux contextes d'empilement */
-/* SEPARES et SIBLINGS dans le DOM -- un z-index eleve a l'interieur de */
-/* #search-modal ne compte que localement ; c'est le z-index de */
-/* #search-modal lui-meme qui est compare a celui du header, et le header */
-/* gagne (1000 > 999), peignant par-dessus tout le contenu du menu tant */
-/* qu'il est ouvert. A la fermeture, aria-hidden change avant la fin du */
-/* fondu CSS : le header retombe aussitot a son z-index normal, laissant */
-/* furtivement voir la croix pendant la transition -- exactement ce qui a */
-/* ete vu en video. Fix : la croix est deplacee DANS .modal-content (ajoutee */
-/* en JS a cet endroit desormais, voir vg-transitions-dev.js), qui devient */
-/* son propre contexte de positionnement -- elle n'a plus a rivaliser avec */
-/* le header du tout, seulement avec le contenu du panneau (z-index local */
-/* suffisant). .modal-content--inner a overflow:hidden dans le theme, mais */
-/* .modal-content lui-meme (le parent direct, pas son enfant --inner) n'a */
-/* pas cette contrainte -- ajouter la croix comme enfant DIRECT de */
-/* .modal-content (et non de .wrapper, plus profond) evite tout decoupage. */
 body #search-modal .modal-content{
   position:relative !important;
 }
@@ -296,8 +257,6 @@ body #search-modal .vg-search-close-fallback{
   border:none !important;
   cursor:pointer !important;
 }
-body #search-modal button.close-modal:hover,
-body #search-modal button.close-modal:focus-visible,
 body #search-modal .vg-search-close-fallback:hover,
 body #search-modal .vg-search-close-fallback:focus-visible{
   color:#171717 !important;
