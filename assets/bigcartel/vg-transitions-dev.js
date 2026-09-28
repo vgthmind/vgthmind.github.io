@@ -791,6 +791,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   // Element actuellement sous la souris (suivi explicite : l'etat :hover
   // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
   var overEl = null;
+  function VGDBG(m) { setTimeout(function () { throw new Error('VGDBG ' + m); }); } // DEBUG TEMPORAIRE
   // Liste produits deja arrivee (sinon le pop s'ouvre quand meme, avec
   // l'image affichee, et la 2e photo est ajoutee a l'arrivee des donnees :
   // /products.json est demande plusieurs fois au chargement et peut mettre
@@ -901,6 +902,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 
   function open(el, d) {
     var r = d.src.tagName === 'IMG' ? contentRect(d.src) : d.rectEl.getBoundingClientRect();
+    VGDBG('open r=' + Math.round(r.width) + 'x' + Math.round(r.height) + ' at ' + Math.round(r.left) + ',' + Math.round(r.top));
     if (!r.width || !r.height) return;
     var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     var size, s0;
@@ -963,6 +965,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   function close(instant) {
     var st = current;
     if (!st) return;
+    VGDBG('close instant=' + !!instant + ' ' + (new Error().stack || '').split(String.fromCharCode(10)).slice(2, 4).join(' | '));
     current = null;
     clearTimeout(st.t);
     var done = function () {
@@ -1006,6 +1009,8 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   }
 
   document.addEventListener('pointerover', function (e) {
+    var el0 = e.target.closest ? e.target.closest(TARGETS) : null;
+    if (el0) VGDBG('over pt=' + e.pointerType + ' cur=' + !!current + ' same=' + (current && current.el === el0));
     if (e.pointerType && e.pointerType !== 'mouse') return;
     var el = e.target.closest ? e.target.closest(TARGETS) : null;
     overEl = el;
@@ -1020,6 +1025,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     if (!el.classList.contains('product-list-link') && !el.classList.contains('vg-category-tile') && el.closest('.product-thumbnails, .thumb-scroller')) return;
     var target = el;
     var d = describe(target, productsNow || []);
+    VGDBG('try d=' + !!d + ' tr=' + !!window.__vgTransitioning);
     if (!d) return;
     open(target, d);
     if (!productsNow && !d.b) {
