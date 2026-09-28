@@ -791,6 +791,12 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   // Element actuellement sous la souris (suivi explicite : l'etat :hover
   // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
   var overEl = null;
+  // Liste produits deja arrivee (sinon le pop s'ouvre quand meme, avec
+  // l'image affichee, et la 2e photo est ajoutee a l'arrivee des donnees :
+  // /products.json est demande plusieurs fois au chargement et peut mettre
+  // quelques secondes -- le 1er survol ne donnait alors rien).
+  var productsNow = null;
+  Promise.resolve(window.__vgProducts).then(function (p) { productsNow = p || []; });
 
   // Meme taille pour tous (tuiles de l'accueil, Latest Drop compris, et
   // grilles produits) : ~1,75x une vignette de grille desktop (~320px).
@@ -921,30 +927,37 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     ia.alt = '';
     ia.src = d.a;
     box.appendChild(ia);
-    var ib = null;
-    if (d.b) {
-      ib = document.createElement('img');
-      ib.className = 'vg-pop-img vg-pop-b';
-      ib.alt = '';
-      ib.src = d.b;
-      box.appendChild(ib);
-    }
     document.documentElement.appendChild(box);
     d.src.classList.add('vg-pop-hidden');
-    var state = { el: el, d: d, box: box, t: null };
+    var state = { el: el, d: d, box: box, t: null, ib: null };
     current = state;
+    if (d.b) addSecond(state, d.b);
     // 2 frames : l'etat initial (petit) doit etre peint avant la transition.
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         if (current !== state) return;
         box.classList.add('is-open');
-        if (ib) {
-          var go = function () { if (current === state) box.classList.add('is-swapped'); };
-          if (ib.complete) state.t = setTimeout(go, 140);
-          else ib.addEventListener('load', function () { state.t = setTimeout(go, 60); }, { once: true });
-        }
+        state.opened = true;
+        if (state.ib) scheduleSwap(state, 140);
       });
     });
+  }
+
+  function addSecond(state, url) {
+    if (state.ib) return;
+    var ib = document.createElement('img');
+    ib.className = 'vg-pop-img vg-pop-b';
+    ib.alt = '';
+    ib.src = url;
+    state.box.appendChild(ib);
+    state.ib = ib;
+    if (state.opened) scheduleSwap(state, 60);
+  }
+
+  function scheduleSwap(state, delay) {
+    var go = function () { if (current === state) state.box.classList.add('is-swapped'); };
+    if (state.ib.complete) state.t = setTimeout(go, delay);
+    else state.ib.addEventListener('load', function () { state.t = setTimeout(go, 60); }, { once: true });
   }
 
   function close(instant) {
@@ -1002,12 +1015,16 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     // Fiche produit : seulement l'image principale, pas les vignettes.
     if (!el.classList.contains('product-list-link') && !el.classList.contains('vg-category-tile') && el.closest('.product-thumbnails, .thumb-scroller')) return;
     var target = el;
-    Promise.resolve(window.__vgProducts).then(function (products) {
-      // L'utilisateur a pu deja quitter la cible.
-      if (overEl !== target || current) return;
-      var d = describe(target, products || []);
-      if (d) open(target, d);
-    });
+    var d = describe(target, productsNow || []);
+    if (!d) return;
+    open(target, d);
+    if (!productsNow && !d.b) {
+      Promise.resolve(window.__vgProducts).then(function (products) {
+        if (!current || current.el !== target) return;
+        var d2 = describe(target, products || []);
+        if (d2 && d2.b) addSecond(current, d2.b);
+      });
+    }
   }, true);
 
   document.addEventListener('pointerout', function (e) {
