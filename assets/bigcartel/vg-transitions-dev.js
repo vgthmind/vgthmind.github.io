@@ -306,30 +306,30 @@
 
 /* === SECTION 6 POINT 3 (suite) : filet de securite pour la croix de */
 /* fermeture du menu de recherche === */
-/* [2026-09-28, retest etape a)] BUG REEL trouve (signale par Jules) : la */
-/* croix qui flottait au-dessus du header n'etait pas le filet de secours -- */
-/* c'etait le bouton NATIF du theme (button.close-modal), auquel une regle */
-/* CSS donnait le style chrome + position:absolute, mais a l'interieur de */
-/* .wrapper (son vrai parent), qui demarre plus haut que .modal-content */
-/* (decale par le margin-top plus haut dans le CSS). isReallyVisible() le */
-/* jugeait donc "visible" a raison (il l'est, juste au mauvais endroit), et */
-/* ne creait jamais le vrai filet de secours dans .modal-content. Plutot que */
-/* de dependre d'une detection de visibilite fragile, le natif est */
-/* desormais cache purement en CSS (display:none, voir vg-transitions-dev.css) */
-/* et le filet de secours est ajoute SANS CONDITION dans .wrapper -- une */
-/* seule croix possible, toujours au bon endroit. */
-/* [2026-09-28, mesure directe via diagnostic jete en exception] Le premier */
-/* essai l'ajoutait dans .modal-content, en supposant que c'etait la boite */
-/* visible etroite du panneau -- FAUX : mesure reelle, .modal-content ET */
-/* .modal-content--inner font 1200px de large, BORD A BORD (edge-to-edge), */
-/* tandis que la boite visible (le panneau etroit et centre qu'on voit a */
-/* l'ecran) est .wrapper (200px a 1000px, soit 800px, centree dedans). Une */
-/* croix en position:absolute;top:12;right:12 DANS .modal-content se */
-/* retrouvait donc a x=1154 (bord droit de .modal-content), largement a */
-/* DROITE du bord droit reel du panneau visible (x=1000) -- d'ou la croix */
-/* flottant hors du panneau, pres du header. .wrapper a deja */
-/* position:relative dans le theme (confirme par la meme mesure), donc pas */
-/* besoin d'une regle CSS supplementaire pour ca. */
+/* [2026-09-28, retest etape a)] Diagnostic en 3 temps (mesures directes via */
+/* une exception jetee expres -- seul moyen de lire l'iframe cross-origin de */
+/* l'apercu, console.log() n'y traverse pas) : */
+/* 1) La croix qui flottait au-dessus du header etait le bouton NATIF du */
+/*    theme (button.close-modal), rendu visible par une regle CSS (chrome + */
+/*    position:absolute) mais mal place -- isReallyVisible() le jugeait donc */
+/*    "visible" a raison et ne creait jamais le filet de secours. Fix : le */
+/*    natif est desormais cache purement en CSS (display:none), le filet de */
+/*    secours ajoute SANS CONDITION. */
+/* 2) Premier essai du filet de secours dans .modal-content : ENCORE mal */
+/*    place. Mesure : .modal-content ET .modal-content--inner font 1200px */
+/*    de large, BORD A BORD (edge-to-edge) -- pas le panneau visible. */
+/* 3) Essai suivant dans .wrapper (200px-1000px, 800px, centree dans les */
+/*    1200px) : toujours legerement hors du panneau visible reel. Cause */
+/*    trouvee : le panneau visible etroit qu'on voit a l'ecran ne vient */
+/*    d'AUCUN de ces 3 elements, mais d'une ancienne regle orpheline dans le */
+/*    Custom CSS (#search-modal .search-form{max-width:640px;margin:0 auto; */
+/*    border-radius:16px;...}, reliquat d'un style verre fonce anterieur */
+/*    jamais nettoye). Fix definitif : .modal-content porte maintenant sa */
+/*    propre largeur (max-width:640px, centree, voir vg-transitions-dev.css) */
+/*    au lieu de deriver son aspect visuel d'un reliquat qu'un futur */
+/*    nettoyage du Custom CSS pourrait faire disparaitre sans prevenir -- */
+/*    le filet de secours peut donc a nouveau s'ancrer dessus de maniere */
+/*    fiable. */
 (function () {
   function closeSearch() {
     // Reutilise le chemin de fermeture deja valide (Echap) plutot que de
@@ -346,7 +346,7 @@
     fallback.setAttribute('aria-label', 'Close search dialog');
     fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
     fallback.addEventListener('click', closeSearch);
-    var panel = modal.querySelector('.wrapper');
+    var panel = modal.querySelector('.modal-content');
     (panel || modal).appendChild(fallback);
   }
 
@@ -397,9 +397,10 @@
       viewport: { w: window.innerWidth, h: window.innerHeight },
       fallback: info(modal.querySelector('.vg-search-close-fallback')),
       wrapper: info(modal.querySelector('.wrapper')),
-      modalContent: info(modal.querySelector('.modal-content'))
+      modalContent: info(modal.querySelector('.modal-content')),
+      searchForm: info(modal.querySelector('.search-form'))
     };
-    setTimeout(function () { throw new Error('VG_DEBUG2 ' + JSON.stringify(payload)); }, 0);
+    setTimeout(function () { throw new Error('VG_DEBUG3 ' + JSON.stringify(payload)); }, 0);
   }
   var mo = new MutationObserver(function () {
     if (modal.getAttribute('aria-hidden') === 'false') setTimeout(logOnce, 80);

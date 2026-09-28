@@ -159,7 +159,24 @@ body .open-search-button:focus-visible{
 body:has(#search-modal[aria-hidden="false"]) .header{
   z-index:1000 !important;
 }
+/* [2026-09-28, mesure directe] .modal-content n'avait ici AUCUNE largeur */
+/* propre : sans le max-width/margin ci-dessous, il fait 1200px bord a bord */
+/* (mesure via diagnostic jete en exception -- seul moyen de lire l'iframe */
+/* cross-origin de l'apercu). Le panneau visible etroit et centre qu'on voit */
+/* a l'ecran ne venait donc PAS de .modal-content, mais d'une ancienne regle */
+/* orpheline dans le Custom CSS (#search-modal .search-form{max-width:640px; */
+/* margin:0 auto;...}, un reliquat d'un style verre fonce anterieur jamais */
+/* nettoye -- a supprimer un jour de Custom CSS pour eviter ce genre de */
+/* piege). En attendant, .modal-content porte desormais sa propre largeur */
+/* pour de vrai, independamment de ce reliquat, et sert d'ancrage fiable a */
+/* position:relative pour la croix de secours (voir vg-transitions-dev.js) : */
+/* utiliser margin-left/right (jamais le raccourci `margin`, qui ecraserait */
+/* le margin-top ci-dessous). */
 body #search-modal .modal-content{
+  position:relative !important;
+  max-width:640px !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
   margin-top:calc(var(--header-height, 90px) + 16px) !important;
   background:rgba(255,255,255,0.75) !important;
   backdrop-filter:blur(24px) saturate(150%) !important;
