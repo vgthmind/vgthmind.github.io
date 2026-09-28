@@ -330,10 +330,13 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 }).catch(function () { return []; });
 
 (function () {
+  // Adresse de ce script (avec son ?v=) : sert a charger
+  // search-keywords.json a cote de lui, avec le meme cache-busting.
+  var SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
   // Meme liste que le badge "piece unique" du Body (seule exception).
   var NOT_UNIQUE = ['cd-vgtape'];
   var HIDDEN_CATS = ['all', 'latest-drop'];
-  var MAX_RESULTS = 6;
+  var MAX_RESULTS = 12;
 
   function closeSearch() {
     // Reutilise le chemin de fermeture deja valide du theme (Echap).
@@ -342,6 +345,56 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 
   function norm(s) {
     return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  // Mots-cles par produit (type de vetement...), fichier separe facile a
+  // editer : assets/bigcartel/search-keywords.json (cle = permalink).
+  var keywordsReady = (function () {
+    try {
+      var u = new URL('search-keywords.json', SCRIPT_SRC || location.href);
+      if (SCRIPT_SRC) u.search = new URL(SCRIPT_SRC).search;
+      return fetch(u.toString()).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+    } catch (e) { return Promise.resolve({}); }
+  })();
+
+  function tokens(s) {
+    return norm(s).split(/[^a-z0-9]+/).filter(Boolean);
+  }
+
+  // Index par produit : mots du nom, des mots-cles, de la description.
+  var indexCache = typeof WeakMap === 'function' ? new WeakMap() : null;
+  function indexOf(p, kw) {
+    if (indexCache && indexCache.has(p)) return indexCache.get(p);
+    var desc = (p.description || '').replace(/<[^>]*>/g, ' ');
+    var tmp = document.createElement('textarea');
+    tmp.innerHTML = desc;
+    var idx = [
+      tokens(p.name),
+      tokens((kw[p.permalink] || []).join(' ')),
+      tokens(tmp.value)
+    ];
+    if (indexCache) indexCache.set(p, idx);
+    return idx;
+  }
+
+  // Rang d'un produit pour la requete : 0 = nom, 1 = mots-cles,
+  // 2 = description, -1 = aucun. Chaque mot tape doit correspondre au
+  // DEBUT d'un mot du produit ("sac" -> "sacoche", "short" -> "shorts") ;
+  // le rang retenu est celui du mot le moins bien place. Pas de recherche
+  // dans la categorie ("Pants/Shorts" ferait remonter tous les pantalons).
+  function rank(qWords, idx) {
+    var worst = 0;
+    for (var i = 0; i < qWords.length; i++) {
+      var w = qWords[i], best = -1;
+      for (var f = 0; f < idx.length && best === -1; f++) {
+        for (var t = 0; t < idx[f].length; t++) {
+          if (idx[f][t].indexOf(w) === 0) { best = f; break; }
+        }
+      }
+      if (best === -1) return -1;
+      if (best > worst) worst = best;
+    }
+    return worst;
   }
 
   function cutoutThumb(p) {
@@ -364,7 +417,8 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     var cats = (p.categories || []).filter(function (c) { return HIDDEN_CATS.indexOf(c.permalink) === -1; });
     var parts = [];
     if (cats[0] && cats[0].name) parts.push(cats[0].name);
-    if (NOT_UNIQUE.indexOf(p.permalink) === -1) parts.push('One of a kind');
+    if (p.status === 'sold-out') parts.push('Sold out');
+    else if (NOT_UNIQUE.indexOf(p.permalink) === -1) parts.push('One of a kind');
     return parts.join(' · ');
   }
 
@@ -447,7 +501,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
       }
     }
 
-    function render(q, products) {
+    function render(q, products, kw) {
       var nq = norm(q);
       list.innerHTML = '';
       items = [];
@@ -458,18 +512,18 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
         input.setAttribute('aria-expanded', 'false');
         return;
       }
-      var words = nq.split(/\s+/);
-      // Uniquement les produits en vente (ni epuises, ni "coming soon").
-      var live = products.filter(function (p) { return !p.status || p.status === 'active'; });
-      function hit(hay) { return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
-      // Le nom d'abord ; la categorie seulement si aucun nom ne correspond
-      // (sinon "short" remonte tous les pantalons, rangés en "Pants/Shorts").
-      var matches = live.filter(function (p) { return hit(norm(p.name)); });
-      if (!matches.length) {
-        matches = live.filter(function (p) {
-          return hit(norm((p.categories || []).map(function (c) { return c.name; }).join(' ')));
-        });
-      }
+      var words = tokens(q);
+      // Tous les produits en ligne (products.json ne contient que ceux-la),
+      // epuises compris mais affiches "Sold out" et classes apres les
+      // disponibles. Ordre : nom, puis mots-cles, puis description.
+      var scored = [];
+      products.forEach(function (p, order) {
+        var r = rank(words, indexOf(p, kw));
+        if (r === -1) return;
+        scored.push({ p: p, r: r, sold: p.status && p.status !== 'active' ? 1 : 0, o: order });
+      });
+      scored.sort(function (a, b) { return (a.r - b.r) || (a.sold - b.sold) || (a.o - b.o); });
+      var matches = scored.map(function (x) { return x.p; });
       allLink.setAttribute('href', '/products?search=' + encodeURIComponent(q.trim()));
       box.hidden = false;
       input.setAttribute('aria-expanded', 'true');
@@ -527,8 +581,8 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     function update() {
       var q = input.value;
       var id = ++reqId;
-      window.__vgProducts.then(function (products) {
-        if (id === reqId) render(q, products || []);
+      Promise.all([window.__vgProducts, keywordsReady]).then(function (res) {
+        if (id === reqId) render(q, res[0] || [], res[1] || {});
       });
     }
 
