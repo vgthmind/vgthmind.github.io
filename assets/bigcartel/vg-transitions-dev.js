@@ -327,13 +327,25 @@
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
   }
 
+  // getBoundingClientRect() reste non-nul meme quand un ancetre le decoupe
+  // via overflow:hidden (c'est exactement ce qui se passait ici : le
+  // bouton natif a une taille non nulle mais est invisible/inclique -- un
+  // simple test de largeur croyait donc a tort qu'il etait affiche, et ne
+  // creait jamais la croix de secours). Verifie plutot que le CENTRE du
+  // bouton peint bien CE bouton (ou un de ses enfants, ex. le svg) au sens
+  // du rendu reel de la page.
+  function isReallyVisible(el) {
+    if (!el) return false;
+    var r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false;
+    var top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return !!top && (top === el || el.contains(top));
+  }
+
   function ensureFallbackClose() {
-    var wrapper = modal.querySelector('.wrapper');
-    if (!wrapper) return;
     var native = modal.querySelector('button.close-modal');
-    var nativeVisible = native && native.getBoundingClientRect().width > 0;
     var fallback = modal.querySelector('.vg-search-close-fallback');
-    if (nativeVisible) {
+    if (isReallyVisible(native)) {
       if (fallback) fallback.remove();
       return;
     }
@@ -344,7 +356,11 @@
     fallback.setAttribute('aria-label', 'Close search dialog');
     fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
     fallback.addEventListener('click', closeSearch);
-    wrapper.appendChild(fallback);
+    // Ajoute directement sur #search-modal (position:fixed, cf. CSS) plutot
+    // que dans .wrapper : .wrapper est enfant de .modal-content--inner qui a
+    // overflow:hidden dans le theme -- c'est tres probablement ce qui
+    // decoupait deja le bouton natif malgre un position:absolute correct.
+    modal.appendChild(fallback);
   }
 
   var mo = new MutationObserver(function (mutList) {
