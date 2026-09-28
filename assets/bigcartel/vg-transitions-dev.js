@@ -369,9 +369,13 @@
 })();
 
 /* === DIAGNOSTIC TEMPORAIRE (2026-09-28, retest etape a)) === */
-/* A retirer une fois la question du header (z-index sans position) */
-/* tranchee par les faits -- demande explicite de vgthmind, ne pas laisser */
-/* traine. Log une seule fois, a la premiere ouverture du menu. */
+/* A retirer une fois la question du header (z-index sans position) et la */
+/* position reelle de la croix tranchees par les faits -- demande explicite */
+/* de vgthmind, ne pas laisser traine. console.log() ne traverse pas jusqu'a */
+/* l'outil de lecture de console cote admin (iframe cross-origin) -- une */
+/* EXCEPTION NON ATTRAPEE, elle, traverse (constate empiriquement). On */
+/* encode donc le diagnostic dans le message d'une exception jetee expres, */
+/* une seule fois, a la premiere ouverture du menu. */
 (function () {
   var modal = document.getElementById('search-modal');
   if (!modal) return;
@@ -381,19 +385,23 @@
     var cs = getComputedStyle(el);
     var r = el.getBoundingClientRect();
     return {
-      tag: el.tagName, cls: el.className, display: cs.display,
-      position: cs.position, zIndex: cs.zIndex,
-      rect: { top: r.top, left: r.left, width: r.width, height: r.height },
-      parentCls: el.parentElement ? el.parentElement.className : null
+      cls: el.className, display: cs.display, position: cs.position, zIndex: cs.zIndex,
+      top: Math.round(r.top), left: Math.round(r.left), width: Math.round(r.width), height: Math.round(r.height)
     };
   }
   function logOnce() {
     if (logged) return;
     logged = true;
     var header = document.querySelector('.header');
-    console.log('[vg-debug] header', header ? { position: getComputedStyle(header).position, zIndex: getComputedStyle(header).zIndex, cls: header.className } : null);
-    console.log('[vg-debug] native close-modal', info(modal.querySelector('button.close-modal')));
-    console.log('[vg-debug] fallback close', info(modal.querySelector('.vg-search-close-fallback')));
+    var payload = {
+      header: header ? { position: getComputedStyle(header).position, zIndex: getComputedStyle(header).zIndex } : null,
+      native: info(modal.querySelector('button.close-modal')),
+      fallback: info(modal.querySelector('.vg-search-close-fallback')),
+      modalContent: info(modal.querySelector('.modal-content')),
+      modalContentInner: info(modal.querySelector('.modal-content--inner')),
+      wrapper: info(modal.querySelector('.wrapper'))
+    };
+    setTimeout(function () { throw new Error('VG_DEBUG ' + JSON.stringify(payload)); }, 0);
   }
   var mo = new MutationObserver(function () {
     if (modal.getAttribute('aria-hidden') === 'false') setTimeout(logOnce, 80);
