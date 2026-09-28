@@ -225,7 +225,7 @@ body #search-modal button.search-button{
 /* [DEBUG TEMPORAIRE 2026-09-28, a retirer] test de visibilite forcee du */
 /* bouton close-modal, sans dependre de #search-modal/.wrapper pour isoler */
 /* si l'element existe vraiment dans le DOM du brouillon reel. */
-button.close-modal{
+button.close-modal, button.close-modal *{
   position:fixed !important;
   top:100px !important;
   left:100px !important;
@@ -234,6 +234,9 @@ button.close-modal{
   background:red !important;
   z-index:2147483647 !important;
   display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  pointer-events:auto !important;
 }
 body #search-modal button.search-button:focus-visible{
   outline:none !important;
