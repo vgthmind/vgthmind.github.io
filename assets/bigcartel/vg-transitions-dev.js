@@ -768,6 +768,227 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
 })();
 
+/* === SECTIONS 4 ET 5 : pop au survol (grilles produits, tuiles de */
+/* l'accueil, image principale de la fiche produit) === */
+/* UN SEUL systeme de survol. Il remplace les 3 qui se chevauchaient : */
+/* l'image d'origine grossie "en flux" (width:320px, qui debordait et */
+/* passait sous le header), .vg-hover-swap (fondu PAR-DESSUS une base */
+/* restee visible = fantome avec des PNG detoures), et le script du Body */
+/* qui echangeait src/srcset (il memorisait un srcset encore vide avant */
+/* lazysizes et ne le restaurait jamais = 2e photo coincee au repos). */
+/* Principe : au survol, une superposition position:fixed, de taille */
+/* identique en pixels pour tous (POP), au-dessus du header, contenant la */
+/* photo de repos et la 2e photo detouree, en fondu enchaine (l'une */
+/* disparait pendant que l'autre apparait). L'image d'origine est masquee */
+/* pendant le pop. Souris uniquement (rien sur tactile), rien en */
+/* prefers-reduced-motion. transform/opacity uniquement. */
+(function () {
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) return;
+
+  var TARGETS = '.product-list-link, .vg-category-tile, .product-images .splide__slide, .product-images .zoom-image-container';
+  var current = null;
+
+  function popSize() {
+    return Math.round(Math.min(440, window.innerHeight * 0.55, window.innerWidth * 0.42));
+  }
+
+  function slugOf(href) {
+    var m = (href || '').match(/\/product\/([^\/?#]+)/);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]).normalize('NFC'); } catch (e) { return m[1]; }
+  }
+
+  function findProduct(products, slug) {
+    if (!slug) return null;
+    for (var i = 0; i < products.length; i++) {
+      var p = products[i].permalink || '';
+      try { p = decodeURIComponent(p); } catch (e) {}
+      if (p.normalize('NFC') === slug) return products[i];
+    }
+    return null;
+  }
+
+  function sized(url, px) {
+    try {
+      var u = new URL(url, location.href);
+      u.searchParams.set('w', String(px));
+      u.searchParams.set('h', String(px));
+      return u.toString();
+    } catch (e) { return url; }
+  }
+
+  // Index d'image a exclure (photos non detourees), partage avec la section 3.
+  function cutoutIndexes(p) {
+    var bad = (window.__VG_NON_CUTOUT || {})[p.permalink] || [];
+    var out = [];
+    (p.images || []).forEach(function (im, i) { if (im && im.url && bad.indexOf(i) === -1) out.push(i); });
+    return out;
+  }
+
+  function bgUrl(el) {
+    if (!el) return null;
+    var m = (getComputedStyle(el).backgroundImage || '').match(/url\(["']?(.*?)["']?\)/);
+    return m ? m[1] : null;
+  }
+
+  function samePath(a, b) {
+    try { return new URL(a, location.href).pathname === new URL(b, location.href).pathname; } catch (e) { return a === b; }
+  }
+
+  // Decrit ce qui doit popper pour une cible : element source a masquer,
+  // rectangle de depart, image de repos, 2e image, mode (taille fixe ou sur place).
+  function describe(el, products) {
+    if (el.classList.contains('vg-category-tile')) {
+      var base = el.querySelector('.vg-category-tile-img:not(.vg-category-tile-img-alt)');
+      var alt = el.querySelector('.vg-category-tile-img-alt');
+      var a = bgUrl(base);
+      if (!a) return null;
+      return { src: base, rectEl: base, a: a, b: bgUrl(alt), mode: 'fixed' };
+    }
+    if (el.classList.contains('product-list-link')) {
+      var img = el.querySelector('img.product-list-image') || el.querySelector('.product-list-image-container img');
+      if (!img) return null;
+      var p = findProduct(products, slugOf(el.getAttribute('href')));
+      var rest = img.currentSrc || img.src;
+      var second = null;
+      if (p) {
+        var idx = cutoutIndexes(p);
+        if (p.images && p.images[0]) rest = sized(p.images[0].url, 900);
+        for (var k = 0; k < idx.length; k++) { if (idx[k] > 0) { second = sized(p.images[idx[k]].url, 900); break; } }
+      }
+      return { src: img, rectEl: img, a: rest, b: second, mode: 'fixed' };
+    }
+    // Fiche produit : image principale affichee, pop sur place (elle est
+    // deja grande) + photo suivante detouree du meme produit.
+    var mainImg = el.querySelector('img');
+    if (!mainImg) return null;
+    var prod = findProduct(products, slugOf(location.pathname));
+    var shown = mainImg.currentSrc || mainImg.src;
+    var next = null;
+    if (prod) {
+      var ids = cutoutIndexes(prod);
+      var cur = -1;
+      for (var j = 0; j < (prod.images || []).length; j++) { if (samePath(prod.images[j].url, shown)) { cur = j; break; } }
+      for (var q = 0; q < ids.length; q++) { if (ids[q] !== cur) { next = sized(prod.images[ids[q]].url, 1200); break; } }
+    }
+    return { src: mainImg, rectEl: mainImg, a: shown, b: next, mode: 'inplace' };
+  }
+
+  function contentRect(img) {
+    // Rectangle reellement occupe par l'image (object-fit:contain) ou par
+    // le fond (background-size:contain) : evite de popper une boite vide.
+    var r = img.getBoundingClientRect();
+    var w = r.width, h = r.height, nw = img.naturalWidth, nh = img.naturalHeight;
+    if (nw && nh && w && h) {
+      var s = Math.min(w / nw, h / nh);
+      var cw = nw * s, ch = nh * s;
+      return { left: r.left + (w - cw) / 2, top: r.top + (h - ch) / 2, width: cw, height: ch };
+    }
+    return { left: r.left, top: r.top, width: w, height: h };
+  }
+
+  function open(el, d) {
+    var r = d.src.tagName === 'IMG' ? contentRect(d.src) : d.rectEl.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var size, s0;
+    if (d.mode === 'inplace') {
+      size = Math.max(r.width, r.height) * 1.08;
+      s0 = 1 / 1.08;
+    } else {
+      size = popSize();
+      s0 = Math.max(r.width, r.height) / size;
+      // Jamais coupe : le pop reste entierement dans la fenetre.
+      var half = size / 2 + 8;
+      cx = Math.min(Math.max(cx, half), window.innerWidth - half);
+      cy = Math.min(Math.max(cy, half), window.innerHeight - half);
+    }
+    var box = document.createElement('div');
+    box.className = 'vg-pop';
+    box.style.width = size + 'px';
+    box.style.height = size + 'px';
+    box.style.left = cx + 'px';
+    box.style.top = cy + 'px';
+    box.style.setProperty('--vg-pop-s0', String(s0));
+    var ia = document.createElement('img');
+    ia.className = 'vg-pop-img vg-pop-a';
+    ia.alt = '';
+    ia.src = d.a;
+    box.appendChild(ia);
+    var ib = null;
+    if (d.b) {
+      ib = document.createElement('img');
+      ib.className = 'vg-pop-img vg-pop-b';
+      ib.alt = '';
+      ib.src = d.b;
+      box.appendChild(ib);
+    }
+    document.documentElement.appendChild(box);
+    d.src.classList.add('vg-pop-hidden');
+    var state = { el: el, d: d, box: box, t: null };
+    current = state;
+    // 2 frames : l'etat initial (petit) doit etre peint avant la transition.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (current !== state) return;
+        box.classList.add('is-open');
+        if (ib) {
+          var go = function () { if (current === state) box.classList.add('is-swapped'); };
+          if (ib.complete) state.t = setTimeout(go, 140);
+          else ib.addEventListener('load', function () { state.t = setTimeout(go, 60); }, { once: true });
+        }
+      });
+    });
+  }
+
+  function close(instant) {
+    var st = current;
+    if (!st) return;
+    current = null;
+    clearTimeout(st.t);
+    var done = function () {
+      if (st.box.parentNode) st.box.remove();
+      st.d.src.classList.remove('vg-pop-hidden');
+    };
+    if (instant) { done(); return; }
+    st.box.classList.remove('is-swapped');
+    st.box.classList.remove('is-open');
+    setTimeout(done, 230);
+  }
+
+  document.addEventListener('pointerover', function (e) {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    var el = e.target.closest ? e.target.closest(TARGETS) : null;
+    if (current && el === current.el) return;
+    if (current) close(false);
+    if (!el || window.__vgTransitioning) return;
+    // Fiche produit : seulement l'image principale, pas les vignettes.
+    if (!el.classList.contains('product-list-link') && !el.classList.contains('vg-category-tile') && el.closest('.product-thumbnails, .thumb-scroller')) return;
+    var target = el;
+    Promise.resolve(window.__vgProducts).then(function (products) {
+      // L'utilisateur a pu deja quitter la cible.
+      if (!target.matches(':hover') || current) return;
+      var d = describe(target, products || []);
+      if (d) open(target, d);
+    });
+  }, true);
+
+  document.addEventListener('pointerout', function (e) {
+    if (!current) return;
+    var to = e.relatedTarget;
+    if (to && current.el.contains(to)) return;
+    if (!current.el.contains(e.target)) return;
+    close(false);
+  }, true);
+
+  // Au clic (section 3 / navigation), le pop disparait immediatement : la
+  // transition doit partir de la vignette au repos.
+  document.addEventListener('click', function () { close(true); }, true);
+  window.addEventListener('scroll', function () { close(true); }, { passive: true });
+  window.addEventListener('blur', function () { close(true); });
+})();
+
 /* === SECTION 3 : clic produit/categorie, vraie orbite === */
 /* Meme mecanique que pageTransition() (section 2) : l'icone qui tournoie */
 /* est ici le vetement clique lui-meme (pas une icone generique), et */
