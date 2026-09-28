@@ -317,9 +317,6 @@
 /* nulle a l'ouverture -- jamais en double si le natif venait a fonctionner */
 /* (ex. sur un environnement different de cet aperçu d'editeur). */
 (function () {
-  var modal = document.getElementById('search-modal');
-  if (!modal) return;
-
   function closeSearch() {
     // Reutilise le chemin de fermeture deja valide (Echap) plutot que de
     // manipuler aria-hidden/scroll-lock a la main et risquer un etat
@@ -342,40 +339,65 @@
     return !!top && (top === el || el.contains(top));
   }
 
-  function ensureFallbackClose() {
-    var native = modal.querySelector('button.close-modal');
-    var fallback = modal.querySelector('.vg-search-close-fallback');
-    if (isReallyVisible(native)) {
-      if (fallback) fallback.remove();
-      return;
+  function setup(modal) {
+    function ensureFallbackClose() {
+      var native = modal.querySelector('button.close-modal');
+      var fallback = modal.querySelector('.vg-search-close-fallback');
+      if (isReallyVisible(native)) {
+        if (fallback) fallback.remove();
+        return;
+      }
+      if (fallback) return;
+      fallback = document.createElement('button');
+      fallback.type = 'button';
+      fallback.className = 'vg-search-close-fallback';
+      fallback.setAttribute('aria-label', 'Close search dialog');
+      fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+      fallback.addEventListener('click', closeSearch);
+      // Ajoute directement sur #search-modal (position:fixed, cf. CSS) plutot
+      // que dans .wrapper : .wrapper est enfant de .modal-content--inner qui a
+      // overflow:hidden dans le theme -- c'est tres probablement ce qui
+      // decoupait deja le bouton natif malgre un position:absolute correct.
+      modal.appendChild(fallback);
     }
-    if (fallback) return;
-    fallback = document.createElement('button');
-    fallback.type = 'button';
-    fallback.className = 'vg-search-close-fallback';
-    fallback.setAttribute('aria-label', 'Close search dialog');
-    fallback.innerHTML = '<svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M1 1l14 14M15 1L1 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
-    fallback.addEventListener('click', closeSearch);
-    // Ajoute directement sur #search-modal (position:fixed, cf. CSS) plutot
-    // que dans .wrapper : .wrapper est enfant de .modal-content--inner qui a
-    // overflow:hidden dans le theme -- c'est tres probablement ce qui
-    // decoupait deja le bouton natif malgre un position:absolute correct.
-    modal.appendChild(fallback);
+
+    var mo = new MutationObserver(function (mutList) {
+      mutList.forEach(function (m) {
+        if (m.attributeName === 'aria-hidden') {
+          if (modal.getAttribute('aria-hidden') === 'false') {
+            // Le natif (s'il existe un jour) doit avoir le temps de se
+            // mettre en page avant qu'on juge sa largeur.
+            setTimeout(ensureFallbackClose, 50);
+          }
+        }
+      });
+    });
+    mo.observe(modal, { attributes: true });
+    if (modal.getAttribute('aria-hidden') === 'false') setTimeout(ensureFallbackClose, 50);
   }
 
-  var mo = new MutationObserver(function (mutList) {
-    mutList.forEach(function (m) {
-      if (m.attributeName === 'aria-hidden') {
-        if (modal.getAttribute('aria-hidden') === 'false') {
-          // Le natif (s'il existe un jour) doit avoir le temps de se
-          // mettre en page avant qu'on juge sa largeur.
-          setTimeout(ensureFallbackClose, 50);
-        }
-      }
+  // [2026-09-28] BUG REEL trouve en testant l'etape a) : ce module entier ne
+  // demarrait jamais dans le vrai brouillon. Cause probable : ce script est
+  // charge tot (preload dans le <head>) et peut s'executer AVANT que
+  // #search-modal (tout en bas de layout.html) existe dans le DOM -- un
+  // simple getElementById au chargement du script echouait donc
+  // silencieusement, sans jamais reessayer. Attend desormais le DOM prêt,
+  // avec un filet de secours par MutationObserver si l'element apparait
+  // encore plus tard que DOMContentLoaded.
+  function init() {
+    var modal = document.getElementById('search-modal');
+    if (modal) { setup(modal); return; }
+    var bodyObserver = new MutationObserver(function () {
+      var m = document.getElementById('search-modal');
+      if (m) { bodyObserver.disconnect(); setup(m); }
     });
-  });
-  mo.observe(modal, { attributes: true });
-  if (modal.getAttribute('aria-hidden') === 'false') setTimeout(ensureFallbackClose, 50);
+    bodyObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 
 /* === SECTION 6 POINT 2 : sequence splash -> accueil (2 clips) === */
