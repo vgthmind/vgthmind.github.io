@@ -374,40 +374,6 @@
   }
 })();
 
-/* === DIAGNOSTIC TEMPORAIRE 2 (2026-09-28) === */
-/* Retest apres le fix .wrapper -- a retirer une fois confirme. */
-(function () {
-  var modal = document.getElementById('search-modal');
-  if (!modal) return;
-  var logged = false;
-  function info(el) {
-    if (!el) return null;
-    var cs = getComputedStyle(el);
-    var r = el.getBoundingClientRect();
-    return {
-      cls: el.className, parent: el.parentElement ? el.parentElement.className : null,
-      position: cs.position,
-      top: Math.round(r.top), left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), height: Math.round(r.height)
-    };
-  }
-  function logOnce() {
-    if (logged) return;
-    logged = true;
-    var payload = {
-      viewport: { w: window.innerWidth, h: window.innerHeight },
-      fallback: info(modal.querySelector('.vg-search-close-fallback')),
-      wrapper: info(modal.querySelector('.wrapper')),
-      modalContent: info(modal.querySelector('.modal-content')),
-      searchForm: info(modal.querySelector('.search-form'))
-    };
-    setTimeout(function () { throw new Error('VG_DEBUG3 ' + JSON.stringify(payload)); }, 0);
-  }
-  var mo = new MutationObserver(function () {
-    if (modal.getAttribute('aria-hidden') === 'false') setTimeout(logOnce, 80);
-  });
-  mo.observe(modal, { attributes: true });
-})();
-
 /* === SECTION 6 POINT 2 : sequence splash -> accueil (2 clips) === */
 /* Reprend a l'identique le script auparavant colle dans le Body (meme */
 /* logo, meme flag sessionStorage 'vg-splash-seen', meme tirage aleatoire */
