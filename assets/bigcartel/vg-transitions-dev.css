@@ -151,9 +151,11 @@ body .open-search-button:focus-visible{
 /* faisant retomber le header dans le flux normal du document -- sous cet */
 /* espace de compensation, d'ou le decalage vers le bas observe a chaque */
 /* fois. Fix : ne plus toucher a `position` du tout (laisser le theme gerer */
-/* sa propre valeur, fixed ou non), se contenter d'ajouter le z-index -- */
-/* suffisant si le header a deja une position non-static, ce qui semble */
-/* etre le cas ici. */
+/* sa propre valeur), se contenter d'ajouter le z-index. CONFIRME par */
+/* mesure directe le 2026-09-28 (getComputedStyle, diagnostic jete en */
+/* exception -- seul moyen de lire l'iframe cross-origin de l'apercu) : le */
+/* header a bien position:fixed nativement, donc ce z-index s'applique pour */
+/* de vrai (jamais un rappel de la question a garder ouverte). */
 body:has(#search-modal[aria-hidden="false"]) .header{
   z-index:1000 !important;
 }
@@ -215,27 +217,27 @@ body #search-modal input.search-input:focus-visible{
   outline:none !important;
   box-shadow:0 0 0 2px rgba(143,147,154,0.45) !important;
 }
-/* [2026-09-28] BUG REEL trouve en retestant l'etape a) : la croix qu'on */
-/* voyait flotter au-dessus du header (jamais dans le panneau, malgre les */
-/* correctifs precedents) N'ETAIT PAS le filet de secours JS -- c'etait le */
-/* bouton NATIF du theme (button.close-modal) lui-meme, avec le style chrome */
-/* de la regle ci-dessous applique dessus, mais positionne en absolu dans */
-/* .wrapper (son vrai parent, deja position:relative dans theme.css) et non */
-/* dans .modal-content -- .wrapper demarre plus haut que .modal-content */
-/* (qui a le margin-top ci-dessus), d'ou la croix flottant au-dessus du */
-/* panneau/pres du header. isReallyVisible() (cote JS) le jugeait "visible" */
-/* a raison (il l'est, juste au mauvais endroit) et n'ajoutait donc jamais */
-/* le vrai filet de secours dans .modal-content. Plutot que de dependre */
-/* d'une detection de visibilite fragile, on prend maintenant le controle */
-/* total : le natif est purement et simplement cache, et le filet de */
-/* secours (voir vg-transitions-dev.js) est TOUJOURS ajoute dans */
-/* .modal-content, sans condition -- une seule croix possible, toujours au */
-/* bon endroit. */
+/* [2026-09-28] BUG REEL trouve en retestant l'etape a), en 2 temps : */
+/* 1) Le natif (button.close-modal) est desormais purement cache (display: */
+/*    none) plutot que traque par une detection de visibilite fragile -- */
+/*    le theme lui donne un style chrome + position:absolute dans .wrapper */
+/*    via une regle plus haut, et cette regle avait rendu le natif visible */
+/*    mais mal place, ce qui faussait toute detection "est-il visible ?". */
+/* 2) Le filet de secours JS lui-meme, ajoute sans condition dans */
+/*    .modal-content, flottait ENCORE au-dessus du header. Mesure directe */
+/*    (diagnostic jete en exception, seul moyen de lire l'iframe cross- */
+/*    origin de l'apercu) : .modal-content ET .modal-content--inner font */
+/*    1200px de large, BORD A BORD -- ce n'est PAS le panneau visible. Le */
+/*    panneau visible et centre qu'on voit a l'ecran est .wrapper (200px a */
+/*    1000px, 800px de large), qui a deja position:relative nativement */
+/*    dans le theme. Une croix en top:12/right:12 DANS .modal-content */
+/*    atterrissait donc au bord droit de la zone de 1200px (x=1154), */
+/*    largement a droite du bord droit reel du panneau (x=1000) -- d'ou la */
+/*    croix flottant hors du panneau, pres du header. Fix : filet de */
+/*    secours ajoute dans .wrapper (voir vg-transitions-dev.js), pas besoin */
+/*    de position:relative ici puisque .wrapper l'a deja par defaut. */
 body #search-modal button.close-modal{
   display:none !important;
-}
-body #search-modal .modal-content{
-  position:relative !important;
 }
 body #search-modal .vg-search-close-fallback{
   position:absolute !important;
