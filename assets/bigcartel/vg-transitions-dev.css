@@ -194,12 +194,23 @@ body #search-modal input.search-input:focus-visible{
 /* invisible en pratique. Repositionne en absolu dans le coin haut-droit de */
 /* .wrapper (deja position:relative dans theme.css), sorti du flux flex, */
 /* avec visibilite forcee en filet de securite. */
-body #search-modal button.close-modal{
+/* [2026-09-28] Le bouton natif close-modal ne se rendait jamais visible sur */
+/* le vrai brouillon, meme force en CSS (position:fixed + visibility:visible */
+/* + opacity:1 directement dessus, toujours invisible -- signe que l'element */
+/* n'existe pas dans ce rendu, pas un probleme de calque/couleur). Filet de */
+/* securite JS ajoute dans vg-transitions-dev.js : injecte une */
+/* .vg-search-close-fallback si le natif est absent/invisible a l'ouverture. */
+/* Meme habillage visuel applique aux deux (le natif, au cas ou il se */
+/* mettrait a fonctionner un jour ailleurs, et le filet de secours). */
+body #search-modal button.close-modal,
+body #search-modal .vg-search-close-fallback{
   position:absolute !important;
   top:12px !important;
   right:12px !important;
   z-index:10 !important;
   display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
   visibility:visible !important;
   opacity:1 !important;
   color:#3d4045 !important;
@@ -208,10 +219,14 @@ body #search-modal button.close-modal{
   border-radius:50% !important;
   width:34px !important;
   height:34px !important;
-  opacity:1 !important;
+  padding:0 !important;
+  border:none !important;
+  cursor:pointer !important;
 }
 body #search-modal button.close-modal:hover,
-body #search-modal button.close-modal:focus-visible{
+body #search-modal button.close-modal:focus-visible,
+body #search-modal .vg-search-close-fallback:hover,
+body #search-modal .vg-search-close-fallback:focus-visible{
   color:#171717 !important;
   filter:brightness(1.08) !important;
   outline:none !important;
@@ -221,22 +236,6 @@ body #search-modal button.search-button{
   background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
   border-radius:8px !important;
   box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
-}
-/* [DEBUG TEMPORAIRE 2026-09-28, a retirer] test de visibilite forcee du */
-/* bouton close-modal, sans dependre de #search-modal/.wrapper pour isoler */
-/* si l'element existe vraiment dans le DOM du brouillon reel. */
-button.close-modal, button.close-modal *{
-  position:fixed !important;
-  top:100px !important;
-  left:100px !important;
-  width:100px !important;
-  height:100px !important;
-  background:red !important;
-  z-index:2147483647 !important;
-  display:block !important;
-  visibility:visible !important;
-  opacity:1 !important;
-  pointer-events:auto !important;
 }
 body #search-modal button.search-button:focus-visible{
   outline:none !important;
