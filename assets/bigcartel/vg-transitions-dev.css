@@ -591,9 +591,9 @@ body #navigation-modal .page_list--pages li a{
   box-shadow:0 3px 0 #6f7379, 0 8px 18px rgba(0,0,0,0.16) !important;
 }
 /* Icone de transition de chaque page (memes fichiers que l'animation). */
-body #navigation-modal .page_list li a[href="/products"]::before,
+body #navigation-modal .page_list li a[href$="/products"]::before,
 body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before,
-body #navigation-modal .page_list li a[href="/contact"]::before{
+body #navigation-modal .page_list li a[href*="/contact"]::before{
   content:'';
   flex:none;
   width:40px;
@@ -601,9 +601,9 @@ body #navigation-modal .page_list li a[href="/contact"]::before{
   background:center / contain no-repeat;
   filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3));
 }
-body #navigation-modal .page_list li a[href="/products"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/products-icon.png");}
+body #navigation-modal .page_list li a[href$="/products"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/products-icon.png");}
 body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/info-icon.png");}
-body #navigation-modal .page_list li a[href="/contact"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/contact-icon.png");}
+body #navigation-modal .page_list li a[href*="/contact"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/contact-icon.png");}
 body #navigation-modal .page_list--main li a::after,
 body #navigation-modal .page_list--pages li a::after{
   content:'';
@@ -693,6 +693,12 @@ body #navigation-modal .vg-menu-foot .vg-menu-search{
 body #navigation-modal .vg-menu-foot .cart-link{
   flex:1;
   justify-content:center;
+  color:#2b2c2e !important;
+  background:rgba(255,255,255,0.45) !important;
+}
+body #navigation-modal .vg-menu-foot .cart-link *{
+  color:#2b2c2e !important;
+  opacity:1 !important;
 }
 
 /* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
