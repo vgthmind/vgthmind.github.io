@@ -139,15 +139,22 @@ body .open-search-button:focus-visible{
 /* [2026-09-28, vidéo 13:58] BUG REEL : une bande beige vide apparaissait */
 /* au-dessus du header quand le menu est ouvert -- le header se retrouvait */
 /* decale vers le bas (~1x sa hauteur) au lieu de rester a sa place normale */
-/* en haut de la page. Cause probable : forcer position:relative sur un */
-/* header normalement position:static perturbe le calcul de hauteur dans */
-/* son parent (probablement flex/grid, header a flex-shrink:0 dans le */
-/* theme). position:sticky top:0 est visuellement identique a static tant */
-/* qu'on est en haut de la page (donc aucun changement visible habituel), */
-/* mais cree tout de meme un contexte d'empilement propre pour le z-index. */
+/* en haut de la page. 2 essais infructueux (position:relative, puis */
+/* position:sticky) ont donne exactement le meme decalage dans les deux */
+/* cas -- ca ecarte un probleme lie au TYPE de position choisi. Cause reelle */
+/* la plus probable : le header est deja position:fixed en temps normal */
+/* (une classe "fixed" ajoutee par le theme, non visible dans le CSS statique */
+/* -- coherent avec header.fixed{position:fixed;top:0;left:0} deja repere */
+/* dans theme.css), avec un espace/padding quelque part au-dessus du */
+/* contenu principal pour compenser visuellement ce header flottant. */
+/* Imposer position:relative/sticky ECRASAIT ce position:fixed existant, */
+/* faisant retomber le header dans le flux normal du document -- sous cet */
+/* espace de compensation, d'ou le decalage vers le bas observe a chaque */
+/* fois. Fix : ne plus toucher a `position` du tout (laisser le theme gerer */
+/* sa propre valeur, fixed ou non), se contenter d'ajouter le z-index -- */
+/* suffisant si le header a deja une position non-static, ce qui semble */
+/* etre le cas ici. */
 body:has(#search-modal[aria-hidden="false"]) .header{
-  position:sticky !important;
-  top:0 !important;
   z-index:1000 !important;
 }
 body #search-modal .modal-content{
