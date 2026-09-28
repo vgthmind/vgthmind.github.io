@@ -185,7 +185,23 @@ body #search-modal input.search-input:focus-visible{
   outline:none !important;
   box-shadow:0 0 0 2px rgba(143,147,154,0.45) !important;
 }
+/* [2026-09-28] BUG REEL trouve en testant l'etape a) (croix de fermeture */
+/* jamais visible dans le brouillon reel, alors que tout le monde -- y */
+/* compris les validations precedentes -- ne parlait que de la petite croix */
+/* "effacer" native du champ, jamais de ce bouton-la). Cause probable : */
+/* .close-modal est premier enfant de .wrapper (display:flex column), */
+/* pousse a droite par un margin-left:auto herite du theme -- fragile et */
+/* invisible en pratique. Repositionne en absolu dans le coin haut-droit de */
+/* .wrapper (deja position:relative dans theme.css), sorti du flux flex, */
+/* avec visibilite forcee en filet de securite. */
 body #search-modal button.close-modal{
+  position:absolute !important;
+  top:12px !important;
+  right:12px !important;
+  z-index:10 !important;
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
   color:#3d4045 !important;
   background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
   box-shadow:0 2px 0 #6f7379, 0 3px 5px rgba(0,0,0,0.25) !important;
