@@ -855,7 +855,18 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
       var alt = el.querySelector('.vg-category-tile-img-alt');
       var a = bgUrl(base);
       if (!a) return null;
-      return { src: base, rectEl: base, a: a, b: bgUrl(alt), mode: 'fixed' };
+      var b2 = bgUrl(alt);
+      // Categorie a un seul produit (ex. Merch) : pas de 2e image fournie
+      // par la tuile, on prend la 2e photo detouree de ce meme produit.
+      if (!b2) {
+        for (var t = 0; t < products.length && !b2; t++) {
+          var tp = products[t];
+          if (!tp.images || !tp.images[0] || !samePath(tp.images[0].url, a)) continue;
+          var ti = cutoutIndexes(tp);
+          for (var u = 0; u < ti.length; u++) { if (ti[u] > 0) { b2 = sized(tp.images[ti[u]].url, 900); break; } }
+        }
+      }
+      return { src: base, rectEl: base, a: a, b: b2, mode: 'fixed' };
     }
     if (el.classList.contains('product-list-link')) {
       var img = el.querySelector('img.product-list-image') || el.querySelector('.product-list-image-container img');
