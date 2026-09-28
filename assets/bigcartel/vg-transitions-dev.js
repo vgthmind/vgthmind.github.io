@@ -788,6 +788,9 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 
   var TARGETS = '.product-list-link, .vg-category-tile, .product-images .splide__slide, .product-images .zoom-image-container';
   var current = null;
+  // Element actuellement sous la souris (suivi explicite : l'etat :hover
+  // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
+  var overEl = null;
 
   // Meme taille pour tous (tuiles de l'accueil, Latest Drop compris, et
   // grilles produits) : ~1,75x une vignette de grille desktop (~320px).
@@ -992,6 +995,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   document.addEventListener('pointerover', function (e) {
     if (e.pointerType && e.pointerType !== 'mouse') return;
     var el = e.target.closest ? e.target.closest(TARGETS) : null;
+    overEl = el;
     if (current && el === current.el) return;
     if (current) close(false);
     if (!el || window.__vgTransitioning) return;
@@ -1000,15 +1004,16 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     var target = el;
     Promise.resolve(window.__vgProducts).then(function (products) {
       // L'utilisateur a pu deja quitter la cible.
-      if (!target.matches(':hover') || current) return;
+      if (overEl !== target || current) return;
       var d = describe(target, products || []);
       if (d) open(target, d);
     });
   }, true);
 
   document.addEventListener('pointerout', function (e) {
-    if (!current) return;
     var to = e.relatedTarget;
+    if (overEl && (!to || !overEl.contains(to))) overEl = null;
+    if (!current) return;
     if (to && current.el.contains(to)) return;
     if (!current.el.contains(e.target)) return;
     close(false);
