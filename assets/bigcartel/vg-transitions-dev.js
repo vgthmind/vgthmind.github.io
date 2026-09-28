@@ -789,8 +789,10 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   var TARGETS = '.product-list-link, .vg-category-tile, .product-images .splide__slide, .product-images .zoom-image-container';
   var current = null;
 
+  // Meme taille pour tous (tuiles de l'accueil, Latest Drop compris, et
+  // grilles produits) : ~1,75x une vignette de grille desktop (~320px).
   function popSize() {
-    return Math.round(Math.min(440, window.innerHeight * 0.55, window.innerWidth * 0.42));
+    return Math.round(Math.min(560, window.innerHeight * 0.72, window.innerWidth * 0.5));
   }
 
   function slugOf(href) {
@@ -955,6 +957,36 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     st.box.classList.remove('is-swapped');
     st.box.classList.remove('is-open');
     setTimeout(done, 230);
+  }
+
+  // Prechargement des photos du pop (repos + 2e photo) quand le navigateur
+  // est inactif : sans lui, la 2e photo mettait 1 a 2 s a apparaitre au
+  // premier survol.
+  var preloaded = {};
+  function preloadAll() {
+    Promise.resolve(window.__vgProducts).then(function (products) {
+      var els = Array.prototype.slice.call(document.querySelectorAll('.product-list-link, .vg-category-tile'));
+      var urls = [];
+      els.forEach(function (el) {
+        var d = describe(el, products || []);
+        if (!d) return;
+        [d.a, d.b].forEach(function (u) { if (u && !preloaded[u]) { preloaded[u] = true; urls.push(u); } });
+      });
+      var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 200); };
+      (function next() {
+        if (!urls.length) return;
+        idle(function () {
+          urls.splice(0, 4).forEach(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; });
+          next();
+        });
+      })();
+    });
+  }
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    if (document.readyState === 'complete') setTimeout(preloadAll, 600);
+    else window.addEventListener('load', function () { setTimeout(preloadAll, 600); });
+    // Les tuiles de l'accueil sont creees apres coup par le Body.
+    setTimeout(preloadAll, 3500);
   }
 
   document.addEventListener('pointerover', function (e) {
