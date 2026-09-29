@@ -1614,7 +1614,7 @@ window.__vgTrim = window.__vgTrim || (function () {
 
 /* DEBUG TEMPORAIRE zoom */
 setInterval(function () {
-  var p = document.querySelector('.pswp--open');
+  var p = document.querySelector('.pswp');
   if (!p || window.__vgZdbg) return;
   window.__vgZdbg = 1;
   setTimeout(function () {
