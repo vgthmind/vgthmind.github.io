@@ -956,3 +956,11 @@ body .vg-splash-playing .vg-splash-video.vg-active{
   opacity:1 !important;
   z-index:2 !important;
 }
+
+/* === SECTION 6 : arrivee nette (voir vg-transitions-dev.js) === */
+/* Elements deja visibles a l'arrivee : affiches d'un coup, sans le fondu */
+/* .vg-reveal du Body (qui reste actif pour la suite de la page). */
+.vg-reveal.vg-instant{transition:none !important;}
+/* Ancres et retours : le titre ne se cale jamais sous le header fixe. */
+html{scroll-padding-top:calc(var(--header-height, 90px) + 16px);}
+main h1{scroll-margin-top:calc(var(--header-height, 90px) + 16px);}
