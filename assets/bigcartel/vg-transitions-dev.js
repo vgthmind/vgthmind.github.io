@@ -1611,3 +1611,17 @@ window.__vgTrim = window.__vgTrim || (function () {
     });
   }, true);
 })();
+
+/* DEBUG TEMPORAIRE zoom */
+setInterval(function () {
+  var p = document.querySelector('.pswp--open');
+  if (!p || window.__vgZdbg) return;
+  window.__vgZdbg = 1;
+  setTimeout(function () {
+    var out = [];
+    var e = document.elementFromPoint(20, 200);
+    for (var i = 0; e && i < 7; i++, e = e.parentElement) { var c = getComputedStyle(e); out.push(e.tagName + '.' + String(e.className).slice(0, 30) + '[' + c.backgroundColor + ' op' + c.opacity + ' bf' + c.backdropFilter.slice(0, 20) + ']'); }
+    var bg = document.querySelector('.pswp__bg'); var cb = bg && getComputedStyle(bg);
+    throw new Error('VGZ ' + (cb ? cb.backgroundColor + ' op' + cb.opacity + ' inl' + bg.getAttribute('style') : 'nobg') + ' || ' + out.join(' > '));
+  }, 1200);
+}, 300);
