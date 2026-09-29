@@ -768,6 +768,100 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
 })();
 
+/* === Rognage automatique du vide transparent des photos detourees === */
+/* Pour que le VETEMENT lui-meme ait la meme taille a l'ecran quel que soit */
+/* le cadrage de la photo (un hoodie photographie avec du vide autour ne */
+/* doit pas paraitre plus petit qu'un short qui remplit son image). Chaque */
+/* photo est analysee une seule fois, en petit (200 px), sur un canvas : */
+/* rectangle des pixels non transparents, en fractions de l'image. Resultat */
+/* garde en memoire + localStorage (cle = chemin de l'image, sans les */
+/* parametres de taille). Le CDN d'images BigCartel autorise le CORS. */
+/* Utilise par les sections 4 et 5 (pop), et plus tard la section 3. */
+window.__vgTrim = window.__vgTrim || (function () {
+  var KEY = 'vgTrim1';
+  var mem = {};
+  try { mem = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { mem = {}; }
+  var pending = {};
+  var saveT = null;
+  function keyOf(url) { try { return new URL(url, location.href).pathname; } catch (e) { return url; } }
+  function save() {
+    clearTimeout(saveT);
+    saveT = setTimeout(function () {
+      var keep = {};
+      for (var k in mem) { if (mem[k]) keep[k] = mem[k]; }
+      try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
+    }, 800);
+  }
+  function small(url) {
+    try {
+      var u = new URL(url, location.href);
+      u.searchParams.set('w', '200');
+      u.searchParams.set('h', '200');
+      return u.toString();
+    } catch (e) { return url; }
+  }
+  function analyse(im) {
+    var W = im.naturalWidth, H = im.naturalHeight;
+    if (!W || !H) return null;
+    var c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    var g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, 0, 0);
+    var px = g.getImageData(0, 0, W, H).data; // exception si CORS refuse
+    var l = W, t = H, r = -1, b = -1;
+    for (var y = 0; y < H; y++) {
+      var row = y * W * 4;
+      for (var x = 0; x < W; x++) {
+        if (px[row + x * 4 + 3] > 24) {
+          if (x < l) l = x;
+          if (x > r) r = x;
+          if (y < t) t = y;
+          if (y > b) b = y;
+        }
+      }
+    }
+    if (r < 0) return null;
+    return { ar: W / H, l: l / W, t: t / H, r: (r + 1) / W, b: (b + 1) / H };
+  }
+  function get(url) {
+    if (!url) return null;
+    var k = keyOf(url);
+    return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : undefined;
+  }
+  function load(url) {
+    if (!url) return Promise.resolve(null);
+    var k = keyOf(url);
+    if (Object.prototype.hasOwnProperty.call(mem, k)) return Promise.resolve(mem[k]);
+    if (pending[k]) return pending[k];
+    pending[k] = new Promise(function (res) {
+      var im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.decoding = 'async';
+      im.onload = function () {
+        var box = null;
+        try { box = analyse(im); } catch (e) { box = null; }
+        mem[k] = box;
+        delete pending[k];
+        save();
+        res(box);
+      };
+      im.onerror = function () { delete pending[k]; res(null); };
+      im.src = small(url);
+    });
+    return pending[k];
+  }
+  // Rectangle du vetement quand l'image (rapport ar) est affichee en
+  // "contain" dans un rectangle (left, top, width, height).
+  function garment(box, rect) {
+    var dw = Math.min(rect.width, rect.height * box.ar);
+    var dh = dw / box.ar;
+    var ox = rect.left + (rect.width - dw) / 2, oy = rect.top + (rect.height - dh) / 2;
+    var gw = (box.r - box.l) * dw, gh = (box.b - box.t) * dh;
+    return { cx: ox + box.l * dw + gw / 2, cy: oy + box.t * dh + gh / 2, w: gw, h: gh, size: Math.max(gw, gh), dw: dw, dh: dh, ox: ox, oy: oy };
+  }
+  return { get: get, load: load, garment: garment };
+})();
+
 /* === SECTIONS 4 ET 5 : pop au survol (grilles produits, tuiles de */
 /* l'accueil, image principale de la fiche produit) === */
 /* UN SEUL systeme de survol. Il remplace les 3 qui se chevauchaient : */
@@ -802,6 +896,23 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   // grilles produits) : ~1,75x une vignette de grille desktop (~320px).
   function popSize() {
     return Math.round(Math.min(560, window.innerHeight * 0.72, window.innerWidth * 0.5));
+  }
+
+  var TRIM = window.__vgTrim;
+  // Plus grande dimension du vetement dans la boite du pop (le reste sert a
+  // l'ombre portee).
+  var FILL = 0.9;
+
+  // Recadre une image du pop (transform uniquement) : son vetement mesure g
+  // px (plus grande dimension) et son centre tombe en (x, y) dans la boite
+  // de cote S. L'image elle-meme remplit la boite en "contain".
+  function frame(img, box, S, g, x, y) {
+    var G = TRIM.garment(box, { left: 0, top: 0, width: S, height: S });
+    if (!G.size) return;
+    var m = g / G.size;
+    var tx = (x - S / 2) - m * (G.cx - S / 2);
+    var ty = (y - S / 2) - m * (G.cy - S / 2);
+    img.style.setProperty('transform', 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + m.toFixed(4) + ')', 'important');
   }
 
   function slugOf(href) {
@@ -911,16 +1022,41 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
   }
 
   function open(el, d) {
-    var r = d.src.tagName === 'IMG' ? contentRect(d.src) : d.rectEl.getBoundingClientRect();
+    var boxA = TRIM.get(d.a);
+    if (boxA === undefined) TRIM.load(d.a); // pour la prochaine fois
+    var r;
+    if (d.src.tagName === 'IMG') r = contentRect(d.src);
+    else {
+      r = d.rectEl.getBoundingClientRect();
+      // Tuile : fond en "contain", rectangle reellement occupe par la photo.
+      if (boxA) {
+        var gt = TRIM.garment(boxA, r);
+        r = { left: gt.ox, top: gt.oy, width: gt.dw, height: gt.dh };
+      }
+    }
     if (!r.width || !r.height) return;
     var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    var size, s0;
+    var size, s0, target = null;
     if (d.mode === 'inplace') {
       size = Math.max(r.width, r.height) * 1.08;
       s0 = 1 / 1.08;
+      // Fiche produit : la photo affichee ne bouge pas ; la 2e photo est
+      // recadree pour que son vetement ait la meme taille et la meme place.
+      if (boxA) {
+        var gi = TRIM.garment(boxA, { left: 0, top: 0, width: size, height: size });
+        target = { g: gi.size, x: gi.cx, y: gi.cy, frameA: false };
+      }
     } else {
       size = popSize();
       s0 = Math.max(r.width, r.height) / size;
+      if (boxA) {
+        // Le vetement (pas la photo) fait FILL x la boite pour tous, et le
+        // pop part exactement du vetement de la vignette.
+        var gv = TRIM.garment(boxA, r);
+        s0 = gv.size / (size * FILL);
+        cx = gv.cx; cy = gv.cy;
+        target = { g: size * FILL, x: size / 2, y: size / 2, frameA: true };
+      }
       // Jamais coupe : le pop reste entierement dans la fenetre.
       var half = size / 2 + 8;
       cx = Math.min(Math.max(cx, half), window.innerWidth - half);
@@ -937,10 +1073,11 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     ia.className = 'vg-pop-img vg-pop-a';
     ia.alt = '';
     ia.src = d.a;
+    if (target && target.frameA) frame(ia, boxA, size, target.g, target.x, target.y);
     box.appendChild(ia);
     document.documentElement.appendChild(box);
     d.src.classList.add('vg-pop-hidden');
-    var state = { el: el, d: d, box: box, t: null, ib: null };
+    var state = { el: el, d: d, box: box, t: null, ib: null, size: size, target: target };
     current = state;
     if (d.b) addSecond(state, d.b);
     // Lecture de style forcee : l'etat initial (petit) est pris en compte
@@ -961,13 +1098,23 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
     ib.src = url;
     state.box.appendChild(ib);
     state.ib = ib;
+    // Recadrage de la 2e photo (invisible jusqu'au fondu) : le fondu attend
+    // qu'il soit fait, pour ne jamais montrer un vetement qui change de taille.
+    state.framed = !state.target ? Promise.resolve() : TRIM.load(url).then(function (bx) {
+      if (bx && state.target) frame(ib, bx, state.size, state.target.g, state.target.x, state.target.y);
+    });
     if (state.opened) scheduleSwap(state, 60);
   }
 
   function scheduleSwap(state, delay) {
     var go = function () { if (current === state) state.box.classList.add('is-swapped'); };
-    if (state.ib.complete) state.t = setTimeout(go, delay);
-    else state.ib.addEventListener('load', function () { state.t = setTimeout(go, 60); }, { once: true });
+    var loaded = state.ib.complete ? Promise.resolve(true) : new Promise(function (res) {
+      state.ib.addEventListener('load', function () { res(false); }, { once: true });
+    });
+    Promise.all([loaded, state.framed]).then(function (v) {
+      if (current !== state) return;
+      state.t = setTimeout(go, v[0] ? delay : 60);
+    });
   }
 
   function close(instant) {
@@ -1002,7 +1149,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
       (function next() {
         if (!urls.length) return;
         idle(function () {
-          urls.splice(0, 4).forEach(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; });
+          urls.splice(0, 4).forEach(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; TRIM.load(u); });
           next();
         });
       })();
