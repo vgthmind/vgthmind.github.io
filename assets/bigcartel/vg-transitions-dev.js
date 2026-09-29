@@ -1,3 +1,17 @@
+/* DEBUG TEMPORAIRE timing arrivee */
+(function () {
+  var t0 = performance.now();
+  var boot = !!window.__vgBoot;
+  function rep(tag) {
+    var n = performance.getEntriesByType('navigation')[0] || {};
+    var res = performance.getEntriesByType('resource').filter(function (r) { return r.initiatorType === 'script' || r.initiatorType === 'link' || r.initiatorType === 'css'; })
+      .map(function (r) { return r.name.split('/').pop().split('?')[0].slice(0, 24) + ':' + Math.round(r.startTime) + '+' + Math.round(r.duration); }).join(' ');
+    var msg = 'VGT ' + tag + ' ' + location.pathname + ' boot=' + boot + ' devjs@' + Math.round(t0) + ' resp=' + Math.round(n.responseEnd || 0) + ' domInt=' + Math.round(n.domInteractive || 0) + ' dcl=' + Math.round(n.domContentLoadedEventEnd || 0) + ' load=' + Math.round(n.loadEventEnd || 0) + ' now=' + Math.round(performance.now()) + ' || ' + res;
+    setTimeout(function () { throw new Error(msg.slice(0, 1400)); });
+  }
+  window.addEventListener('load', function () { setTimeout(function () { rep('load'); }, 50); });
+})();
+
 (function () {
   var header = document.querySelector('.header');
   if (header) {
