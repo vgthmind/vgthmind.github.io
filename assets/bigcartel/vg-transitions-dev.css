@@ -615,6 +615,7 @@ body #navigation-modal .page_list--pages li a{
 /* Icone de transition de chaque page (memes fichiers que l'animation). */
 body #navigation-modal .page_list li a[href$="/products"]::before,
 body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before,
+body #navigation-modal .page_list li a[href*="/studio"]::before,
 body #navigation-modal .page_list li a[href*="/contact"]::before{
   content:'';
   flex:none;
@@ -626,6 +627,7 @@ body #navigation-modal .page_list li a[href*="/contact"]::before{
 body #navigation-modal .page_list li a[href$="/products"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/products-icon.png");}
 body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/info-icon.png");}
 body #navigation-modal .page_list li a[href*="/contact"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/contact-icon.png");}
+body #navigation-modal .page_list li a[href*="/studio"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/studio-icon.png");}
 body #navigation-modal .page_list--main li a::after,
 body #navigation-modal .page_list--pages li a::after{
   content:'';
@@ -964,3 +966,36 @@ body .vg-splash-playing .vg-splash-video.vg-active{
 /* Ancres et retours : le titre ne se cale jamais sous le header fixe. */
 html{scroll-padding-top:calc(var(--header-height, 90px) + 16px);}
 main h1{scroll-margin-top:calc(var(--header-height, 90px) + 16px);}
+
+/* === PAGE STUDIO : video d'atelier en boucle en haut de page === */
+/* (inseree par vg-transitions-dev.js sur /studio ; texte = page BigCartel) */
+.vg-studio-reel{
+  display:block;
+  width:min(420px, 86vw);
+  aspect-ratio:4 / 5;
+  margin:8px auto 36px;
+  border-radius:22px;
+  overflow:hidden;
+  background:#e7e4dc;
+  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 18px 40px rgba(23,23,23,0.18);
+  position:relative;
+}
+.vg-studio-reel video,
+.vg-studio-reel img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+/* liseré chrome, comme les panneaux verre du site */
+.vg-studio-reel::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  border:1.5px solid rgba(255,255,255,0.75);
+  box-shadow:0 0 0 1px rgba(120,124,132,0.35) inset;
+}

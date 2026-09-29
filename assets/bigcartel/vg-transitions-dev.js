@@ -293,6 +293,9 @@
     if (href === '/products' || href.indexOf('/products?') === 0) icon = 'https://vgthmind.github.io/assets/bigcartel/products-icon.png';
     else if (href.indexOf('/infos-conditions-generales') !== -1) icon = 'https://vgthmind.github.io/assets/bigcartel/info-icon.png';
     else if (href.indexOf('/contact') !== -1) icon = 'https://vgthmind.github.io/assets/bigcartel/contact-icon.png';
+    // Page Studio : le logo vgthmind en version CHROMEE (distinct du logo
+    // plat de l'accueil, qui garde sa propre transition).
+    else if (href.indexOf('/studio') !== -1) icon = 'https://vgthmind.github.io/assets/bigcartel/studio-icon.png';
     if (!icon) return;
     e.preventDefault();
     if (window.__vgTransitioning) return;
@@ -1598,4 +1601,48 @@ window.__vgTrim = window.__vgTrim || (function () {
   }, { passive: true });
   window.addEventListener('touchstart', function () { touching = true; clearTimeout(timer); }, { passive: true });
   window.addEventListener('touchend', function () { touching = false; clearTimeout(timer); timer = setTimeout(settle, 350); }, { passive: true });
+})();
+
+/* === PAGE STUDIO : video d'atelier (8,6 s, sans son, en boucle) === */
+/* Montee a partir d'extraits des reels deja en ligne (aerographe, couture */
+/* Juki, patron, CD VGTAPE ; ni robot ni visage). Inseree ici plutot que */
+/* dans le contenu de la page (l'editeur BigCartel peut filtrer <video>). */
+/* Legere (900 Ko) : chargee seulement quand elle entre a l'ecran ; en */
+/* prefers-reduced-motion : image fixe, pas de lecture automatique. */
+(function () {
+  if (!/^\/studio\/?$/.test(location.pathname)) return;
+  var BASE = 'https://vgthmind.github.io/assets/bigcartel/studio/';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function mount() {
+    var main = document.querySelector('main');
+    if (!main || main.querySelector('.vg-studio-reel')) return;
+    var h1 = main.querySelector('h1');
+    var box = document.createElement('div');
+    box.className = 'vg-studio-reel';
+    var poster = BASE + 'studio-atelier-poster.jpg';
+    if (reduce) {
+      var im = document.createElement('img');
+      im.src = poster; im.alt = ''; im.loading = 'lazy';
+      box.appendChild(im);
+    } else {
+      var v = document.createElement('video');
+      v.muted = true; v.loop = true; v.playsInline = true;
+      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+      v.preload = 'none';
+      v.poster = poster;
+      box.appendChild(v);
+      var start = function () {
+        if (!v.src) v.src = BASE + 'studio-atelier.mp4';
+        var pr = v.play(); if (pr && pr.catch) pr.catch(function () {});
+      };
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (es) {
+          es.forEach(function (e) { if (e.isIntersecting) start(); else if (v.src) v.pause(); });
+        }, { threshold: 0.2 }).observe(box);
+      } else start();
+    }
+    if (h1 && h1.parentNode) h1.parentNode.insertBefore(box, h1.nextSibling);
+    else main.insertBefore(box, main.firstChild);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
