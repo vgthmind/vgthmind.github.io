@@ -836,9 +836,9 @@ body .product-images{
 /* assombrie, ombre douce qui suit la forme. Fleches et croix deja chromees */
 /* (Custom CSS). Les regles PhotoSwipe plus bas restent en secours. */
 html .vg-lightbox{
-  background:rgba(244,242,236,0.58) !important;
-  -webkit-backdrop-filter:blur(22px) saturate(115%) !important;
-  backdrop-filter:blur(22px) saturate(115%) !important;
+  background:rgba(244,242,236,0.84) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(110%) !important;
+  backdrop-filter:blur(28px) saturate(110%) !important;
 }
 html .vg-lightbox .vg-lightbox-backdrop{
   display:none !important;
