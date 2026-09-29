@@ -802,6 +802,97 @@ body .product-images img{
 body .product-images{
   scroll-margin-top:calc(var(--header-height, 90px) + 16px) !important;
 }
+/* L'image de la fiche produit reste entierement visible sous le header */
+/* quand on fait defiler la description (colonne collante, desktop). */
+@media (min-width:801px){
+  body .product-images{
+    position:sticky !important;
+    top:calc(var(--header-height, 90px) + 16px) !important;
+  }
+}
+
+/* Tactile : AUCUN effet de survol (un doigt qui fait defiler "survole" */
+/* le produit touche : il passait en avant et les autres en gris). */
+@media (hover:none), (pointer:coarse){
+  body .product-list-container:has(.product-list-link:hover) .product-list-link:not(:hover),
+  body .product-list-link,
+  body .product-list-link:hover{
+    opacity:1 !important;
+    filter:none !important;
+    transform:none !important;
+  }
+  body ul.categories:has(li.page a:hover) li.page a:not(:hover){
+    opacity:1 !important;
+  }
+  body .vg-category-tile:hover .vg-category-tile-img{
+    transform:none !important;
+  }
+  .vg-pop{display:none !important;}
+}
+
+/* Zoom plein ecran de la fiche produit (PhotoSwipe) dans la DA : verre */
+/* depoli beige au lieu du noir, fleches et croix chromees. */
+.pswp{
+  --pswp-bg:#f4f2ec;
+  --pswp-placeholder-bg:transparent;
+  --pswp-icon-color:#2b2c2e;
+  --pswp-icon-color-secondary:#ffffff;
+  --pswp-icon-stroke-color:#ffffff;
+  --pswp-icon-stroke-width:0px;
+  --pswp-preloader-color:rgba(43,44,46,0.25);
+  --pswp-preloader-color-secondary:rgba(43,44,46,0.8);
+}
+.pswp__bg{
+  background:rgba(244,242,236,0.62) !important;
+  -webkit-backdrop-filter:blur(18px) saturate(115%) !important;
+  backdrop-filter:blur(18px) saturate(115%) !important;
+}
+.pswp__img{
+  filter:drop-shadow(0 18px 26px rgba(23,23,23,0.22)) !important;
+}
+.pswp__button--arrow,
+.pswp__button--close,
+.pswp__button--zoom{
+  width:48px !important;
+  height:48px !important;
+  margin:0 !important;
+  border-radius:50% !important;
+  background:linear-gradient(180deg,#ffffff 0%,#dfe1e5 45%,#b8bcc3 55%,#eef0f2 100%) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 -2px 4px rgba(0,0,0,0.12) inset, 0 6px 14px rgba(23,23,23,0.18) !important;
+  border:1px solid rgba(120,124,132,0.45) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  opacity:1 !important;
+}
+.pswp__button--arrow{
+  top:50% !important;
+  transform:translateY(-50%) !important;
+}
+.pswp__button--arrow--prev{ left:18px !important; }
+.pswp__button--arrow--next{ right:18px !important; }
+.pswp__button--close{ margin:14px 18px 0 0 !important; }
+.pswp__button--zoom{ margin:14px 10px 0 0 !important; }
+.pswp__button .pswp__icn{
+  position:static !important;
+  width:22px !important;
+  height:22px !important;
+}
+.pswp__button--arrow .pswp__icn{
+  width:26px !important;
+  height:26px !important;
+  margin:0 !important;
+}
+.pswp__icn-shadow{ display:none !important; }
+.pswp__counter{
+  color:#2b2c2e !important;
+  text-shadow:none !important;
+  font-family:'IBM Plex Mono',monospace !important;
+  font-size:12px !important;
+  letter-spacing:0.12em !important;
+  margin:24px 0 0 22px !important;
+  opacity:0.8 !important;
+}
 
 /* === SECTION 6 POINT 2 : 2 videos superposees pour le crossfade === */
 /* Le Custom CSS actuel affiche TOUTE .vg-splash-video des que .vg-splash- */

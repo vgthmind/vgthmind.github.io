@@ -778,7 +778,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
 /* parametres de taille). Le CDN d'images BigCartel autorise le CORS. */
 /* Utilise par les sections 4 et 5 (pop), et plus tard la section 3. */
 window.__vgTrim = window.__vgTrim || (function () {
-  var KEY = 'vgTrim1';
+  var KEY = 'vgTrim2';
   var mem = {};
   try { mem = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { mem = {}; }
   var pending = {};
@@ -808,11 +808,12 @@ window.__vgTrim = window.__vgTrim || (function () {
     var g = c.getContext('2d', { willReadFrequently: true });
     g.drawImage(im, 0, 0);
     var px = g.getImageData(0, 0, W, H).data; // exception si CORS refuse
-    var l = W, t = H, r = -1, b = -1;
+    var l = W, t = H, r = -1, b = -1, n = 0;
     for (var y = 0; y < H; y++) {
       var row = y * W * 4;
       for (var x = 0; x < W; x++) {
         if (px[row + x * 4 + 3] > 24) {
+          n++;
           if (x < l) l = x;
           if (x > r) r = x;
           if (y < t) t = y;
@@ -821,7 +822,9 @@ window.__vgTrim = window.__vgTrim || (function () {
       }
     }
     if (r < 0) return null;
-    return { ar: W / H, l: l / W, t: t / H, r: (r + 1) / W, b: (b + 1) / H };
+    // f = part du rectangle du vetement reellement remplie (1 = objet plein
+    // et carre comme la pochette du CD, ~0,6 pour un pantalon).
+    return { ar: W / H, l: l / W, t: t / H, r: (r + 1) / W, b: (b + 1) / H, f: n / ((r + 1 - l) * (b + 1 - t)) };
   }
   function get(url) {
     if (!url) return null;
@@ -857,7 +860,11 @@ window.__vgTrim = window.__vgTrim || (function () {
     var dh = dw / box.ar;
     var ox = rect.left + (rect.width - dw) / 2, oy = rect.top + (rect.height - dh) / 2;
     var gw = (box.r - box.l) * dw, gh = (box.b - box.t) * dh;
-    return { cx: ox + box.l * dw + gw / 2, cy: oy + box.t * dh + gh / 2, w: gw, h: gh, size: Math.max(gw, gh), dw: dw, dh: dh, ox: ox, oy: oy };
+    // q = "poids visuel" relatif a la plus grande dimension : racine de la
+    // surface reellement remplie / plus grande dimension (1 = carre plein).
+    var big = Math.max(gw, gh), small = Math.min(gw, gh);
+    var q = big ? Math.sqrt((box.f || 1) * small / big) : 1;
+    return { cx: ox + box.l * dw + gw / 2, cy: oy + box.t * dh + gh / 2, w: gw, h: gh, size: big, q: q, dw: dw, dh: dh, ox: ox, oy: oy };
   }
   return { get: get, load: load, garment: garment };
 })();
@@ -880,7 +887,10 @@ window.__vgTrim = window.__vgTrim || (function () {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduceMotion) return;
 
-  var TARGETS = '.product-list-link, .vg-category-tile, .product-images .splide__slide, .product-images .zoom-image-container';
+  // Fiche produit : UNE seule cible pour toute la zone image (avant : la
+  // diapo ET le lien de zoom qu'elle contient, le pop se fermait et se
+  // rouvrait en passant de l'un a l'autre = alternance face/dos).
+  var TARGETS = '.product-list-link, .vg-category-tile, .product-images';
   var current = null;
   // Element actuellement sous la souris (suivi explicite : l'etat :hover
   // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
@@ -902,6 +912,36 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Plus grande dimension du vetement dans la boite du pop (le reste sert a
   // l'ombre portee).
   var FILL = 0.9;
+  // Egalisation du poids visuel (surface visible) : q median mesure sur le
+  // catalogue le 2026-09-29 = 0,73 (min 0,60 sacoche SC_0008, max 0,99 CD).
+  // Un objet plus "plein" que ca (pochette du CD, cache-cou, hoodie
+  // compact) est reduit pour peser pareil ; un
+  // objet plus fin (pantalon) garde la taille max (jamais plus grand que la
+  // boite).
+  var AREA_Q = 0.72;
+  function gFor(box, S) {
+    var G = TRIM.garment(box, { left: 0, top: 0, width: S, height: S });
+    return FILL * S * Math.min(1, AREA_Q / (G.q || AREA_Q));
+  }
+
+  function headerBottom() {
+    var hd = document.querySelector('.header');
+    if (!hd) return 0;
+    var b = hd.getBoundingClientRect().bottom;
+    return b > 0 ? b : 0;
+  }
+
+  // Tuiles de l'accueil : meme taille de pop pour les 6 (Latest Drop
+  // compris), calee sur les tuiles normales (~1,7x) sans que Latest Drop,
+  // plus grande au repos, ne retrecisse (>= 1,15x sa taille au repos).
+  function tileSize() {
+    var sel = ' .vg-category-tile-img:not(.vg-category-tile-img-alt)';
+    var sm = document.querySelector('.vg-category-tile:not(.vg-tile-featured)' + sel);
+    var ft = document.querySelector('.vg-category-tile.vg-tile-featured' + sel);
+    var dim = function (e) { if (!e) return 0; var r = e.getBoundingClientRect(); return Math.max(r.width, r.height); };
+    var g = Math.max(dim(sm) * 1.7, dim(ft) * 1.15);
+    return Math.round(Math.min(popSize(), (g || popSize() * FILL) / FILL));
+  }
 
   // Recadre une image du pop (transform uniquement) : son vetement mesure g
   // px (plus grande dimension) et son centre tombe en (x, y) dans la boite
@@ -992,9 +1032,10 @@ window.__vgTrim = window.__vgTrim || (function () {
       }
       return { src: img, rectEl: img, a: rest, b: second, mode: 'fixed' };
     }
-    // Fiche produit : image principale affichee, pop sur place (elle est
-    // deja grande) + photo suivante detouree du meme produit.
-    var mainImg = el.querySelector('img');
+    // Fiche produit : image de la diapo ACTIVE du carrousel, pop sur place
+    // (elle est deja grande) + photo suivante detouree du meme produit.
+    var mainImg = el.querySelector('.splide__slide.is-active img') ||
+      el.querySelector('.zoom-image-container img, img.product-image');
     if (!mainImg) return null;
     var prod = findProduct(products, slugOf(location.pathname));
     var shown = mainImg.currentSrc || mainImg.src;
@@ -1047,20 +1088,28 @@ window.__vgTrim = window.__vgTrim || (function () {
         target = { g: gi.size, x: gi.cx, y: gi.cy, frameA: false };
       }
     } else {
+      var isTile = el.classList.contains('vg-category-tile');
+      var top = 8;
       size = popSize();
+      if (isTile) {
+        // Tuiles : taille commune, et jamais par-dessus les pills du header.
+        top = headerBottom() + 8;
+        size = Math.min(tileSize(), window.innerHeight - top - 8);
+      }
       s0 = Math.max(r.width, r.height) / size;
       if (boxA) {
-        // Le vetement (pas la photo) fait FILL x la boite pour tous, et le
+        // Le vetement (pas la photo) a le meme poids visuel pour tous, et le
         // pop part exactement du vetement de la vignette.
+        var gA = gFor(boxA, size);
         var gv = TRIM.garment(boxA, r);
-        s0 = gv.size / (size * FILL);
+        s0 = gv.size / gA;
         cx = gv.cx; cy = gv.cy;
-        target = { g: size * FILL, x: size / 2, y: size / 2, frameA: true };
+        target = { g: gA, auto: true, x: size / 2, y: size / 2, frameA: true };
       }
       // Jamais coupe : le pop reste entierement dans la fenetre.
       var half = size / 2 + 8;
       cx = Math.min(Math.max(cx, half), window.innerWidth - half);
-      cy = Math.min(Math.max(cy, half), window.innerHeight - half);
+      cy = Math.min(Math.max(cy, top + size / 2), window.innerHeight - half);
     }
     var box = document.createElement('div');
     box.className = 'vg-pop';
@@ -1101,7 +1150,7 @@ window.__vgTrim = window.__vgTrim || (function () {
     // Recadrage de la 2e photo (invisible jusqu'au fondu) : le fondu attend
     // qu'il soit fait, pour ne jamais montrer un vetement qui change de taille.
     state.framed = !state.target ? Promise.resolve() : TRIM.load(url).then(function (bx) {
-      if (bx && state.target) frame(ib, bx, state.size, state.target.g, state.target.x, state.target.y);
+      if (bx && state.target) frame(ib, bx, state.size, state.target.auto ? gFor(bx, state.size) : state.target.g, state.target.x, state.target.y);
     });
     if (state.opened) scheduleSwap(state, 60);
   }
@@ -1162,19 +1211,29 @@ window.__vgTrim = window.__vgTrim || (function () {
     setTimeout(preloadAll, 3500);
   }
 
+  // Fiche produit : seule l'image elle-meme declenche le pop (pas les
+  // fleches, les vignettes, le compteur).
+  function targetOf(t) {
+    var el = t.closest ? t.closest(TARGETS) : null;
+    if (el && el.classList.contains('product-images')) {
+      if (!t.closest('.zoom-image-container, .splide__slide') || t.closest('button, .splide__arrows, .product-thumbnails-buttons-container, .mobile-buttons-indicator')) el = null;
+    }
+    return el;
+  }
+
   document.addEventListener('pointerover', function (e) {
     if (e.pointerType && e.pointerType !== 'mouse') return;
-    var el = e.target.closest ? e.target.closest(TARGETS) : null;
+    var el = targetOf(e.target);
     overEl = el;
     if (current && el === current.el) return;
     if (current) close(false);
     tryOpen(el);
   }, true);
 
+  // Ecran tactile (pointeur principal pas une souris) : aucun pop, jamais.
+  var FINE = window.matchMedia('(hover: hover) and (pointer: fine)');
   function tryOpen(el) {
-    if (!el || window.__vgTransitioning) return;
-    // Fiche produit : seulement l'image principale, pas les vignettes.
-    if (!el.classList.contains('product-list-link') && !el.classList.contains('vg-category-tile') && el.closest('.product-thumbnails, .thumb-scroller')) return;
+    if (!el || !FINE.matches || window.__vgTransitioning || document.querySelector('.pswp--open')) return;
     var target = el;
     var d = describe(target, productsNow || []);
     if (!d) return;
@@ -1209,6 +1268,12 @@ window.__vgTrim = window.__vgTrim || (function () {
   // transition doit partir de la vignette au repos.
   document.addEventListener('click', function () { overEl = null; close(true); }, true);
   window.addEventListener('scroll', function () { close(true); }, { passive: true });
+  // Carrousel de la fiche produit : des qu'une diapo bouge (fleche, clavier,
+  // glisser), le pop disparait -- jamais de pop qui glisse avec la diapo. Il
+  // revient au prochain mouvement de souris, sur la nouvelle diapo active.
+  document.addEventListener('transitionstart', function (e) {
+    if (current && e.target && e.target.classList && e.target.classList.contains('splide__list')) close(true);
+  }, true);
   window.addEventListener('blur', function () { close(true); });
 })();
 
