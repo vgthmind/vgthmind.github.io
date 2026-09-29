@@ -842,7 +842,10 @@ body .product-images{
   --pswp-preloader-color:rgba(43,44,46,0.25);
   --pswp-preloader-color-secondary:rgba(43,44,46,0.8);
 }
-.pswp__bg{
+/* Plus specifique que l'ancienne regle du Custom CSS (.pswp__bg noir */
+/* rgba(20,19,16,0.8), chargee apres ce fichier). */
+html .pswp .pswp__bg,
+html .pswp .pswp__bg--opacity{
   background:rgba(244,242,236,0.62) !important;
   -webkit-backdrop-filter:blur(18px) saturate(115%) !important;
   backdrop-filter:blur(18px) saturate(115%) !important;
