@@ -1646,3 +1646,15 @@ window.__vgTrim = window.__vgTrim || (function () {
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
+
+/* DEBUG TEMPORAIRE geometrie header */
+(function () {
+  function rep() {
+    var hd = document.querySelector('.header'), m = document.querySelector('main'), h = document.querySelector('main h1');
+    var cs = hd ? getComputedStyle(hd) : null, r = hd ? hd.getBoundingClientRect() : null;
+    var msg = 'VGH ' + location.pathname + ' sy=' + Math.round(scrollY) + ' hdpos=' + (cs && cs.position) + ' hd=' + (r && Math.round(r.top) + '..' + Math.round(r.bottom)) + ' var=' + getComputedStyle(document.documentElement).getPropertyValue('--header-height') +
+      ' main=' + (m && Math.round(m.getBoundingClientRect().top) + ' pt=' + getComputedStyle(m).paddingTop) + ' h1=' + (h && Math.round(h.getBoundingClientRect().top) + '..' + Math.round(h.getBoundingClientRect().bottom)) + ' bodypt=' + getComputedStyle(document.body).paddingTop + ' iw=' + innerWidth;
+    setTimeout(function () { throw new Error(msg); });
+  }
+  if (document.readyState === 'complete') setTimeout(rep, 300); else window.addEventListener('load', function () { setTimeout(rep, 300); });
+})();
