@@ -908,8 +908,14 @@ window.__vgTrim = window.__vgTrim || (function () {
 
   // Meme taille pour tous (tuiles de l'accueil, Latest Drop compris, et
   // grilles produits) : ~1,75x une vignette de grille desktop (~320px).
+  // Facteurs de taille (tuiles : x la tuile normale ; grilles : x la taille
+  // de base). Mode comparaison pour Jules : #vgpop=<tuile>,<grille> dans
+  // l'adresse (invisible pour les visiteurs, a retirer a la publication).
+  var TILE_K = 1.7, GRID_K = 1;
+  var qk = (location.hash.match(/vgpop=([\d.]+),([\d.]+)/) || []);
+  if (qk[1]) { TILE_K = +qk[1]; GRID_K = +qk[2]; document.documentElement.classList.add('vg-popshot'); }
   function popSize() {
-    return Math.round(Math.min(560, window.innerHeight * 0.72, window.innerWidth * 0.5));
+    return Math.round(Math.min(560 * GRID_K, window.innerHeight * 0.72 * GRID_K, window.innerWidth * 0.5 * GRID_K));
   }
 
   var TRIM = window.__vgTrim;
@@ -943,8 +949,8 @@ window.__vgTrim = window.__vgTrim || (function () {
     var sm = document.querySelector('.vg-category-tile:not(.vg-tile-featured)' + sel);
     var ft = document.querySelector('.vg-category-tile.vg-tile-featured' + sel);
     var dim = function (e) { if (!e) return 0; var r = e.getBoundingClientRect(); return Math.max(r.width, r.height); };
-    var g = Math.max(dim(sm) * 1.7, dim(ft) * 1.15);
-    return Math.round(Math.min(popSize(), (g || popSize() * FILL) / FILL));
+    var g = Math.max(dim(sm) * TILE_K, dim(ft) * 1.15 * TILE_K / 1.7);
+    return Math.round(Math.min(600, (g || 480) / FILL));
   }
 
   // Recadre une image du pop (transform uniquement) : son vetement mesure g
@@ -1108,13 +1114,10 @@ window.__vgTrim = window.__vgTrim || (function () {
       }
     } else {
       var isTile = el.classList.contains('vg-category-tile');
-      var top = 8;
-      size = popSize();
-      if (isTile) {
-        // Tuiles : taille commune, et jamais par-dessus les pills du header.
-        top = headerBottom() + 8;
-        size = Math.min(tileSize(), window.innerHeight - top - 8);
-      }
+      // Jamais par-dessus les pills du header (tuiles ET grilles, demande de
+      // Jules du 2026-09-29) et toujours entier dans la fenetre.
+      var top = headerBottom() + 8;
+      size = Math.min(isTile ? tileSize() : popSize(), window.innerHeight - top - 8, window.innerWidth - 16);
       s0 = Math.max(r.width, r.height) / size;
       if (boxA) {
         // Le vetement (pas la photo) a le meme poids visuel pour tous, et le

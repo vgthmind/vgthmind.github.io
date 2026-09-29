@@ -1037,3 +1037,8 @@ main h1, main h2, main [id]{scroll-margin-top:calc(var(--vg-header-h, var(--head
   box-shadow:0 3px 0 #6f7379, 0 6px 12px rgba(0,0,0,0.14) !important;
   white-space:nowrap !important;
 }
+
+/* Mode comparaison des tailles de pop (#vgpop=... dans l'adresse) : pop */
+/* fige a sa taille finale pour les captures. A retirer a la publication. */
+html.vg-popshot .vg-pop,
+html.vg-popshot .vg-pop-img{transition:none !important;}
