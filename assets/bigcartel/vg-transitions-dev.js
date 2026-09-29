@@ -1138,6 +1138,11 @@ window.__vgTrim = window.__vgTrim || (function () {
     void getComputedStyle(box).transform;
     box.classList.add('is-open');
     state.opened = true;
+    if (el.classList.contains('product-images')) setTimeout(function () {
+      var cs = getComputedStyle(box), br = box.getBoundingClientRect();
+      var f = function (im) { if (!im) return 'none'; var c = getComputedStyle(im); return c.opacity + '/' + c.display + '/' + im.naturalWidth + '/' + c.transform.slice(0, 40); };
+      VGDBG('state box ' + cs.display + ' op' + cs.opacity + ' tf' + cs.transform.slice(0, 50) + ' rect ' + Math.round(br.left) + ',' + Math.round(br.top) + ' ' + Math.round(br.width) + ' cls ' + box.className + ' A ' + f(ia) + ' B ' + f(state.ib) + ' SRC ' + getComputedStyle(d.src).opacity + ' z ' + cs.zIndex + ' parent ' + box.parentNode.tagName);
+    }, 1500);
     if (state.ib) scheduleSwap(state, 140);
   }
 
