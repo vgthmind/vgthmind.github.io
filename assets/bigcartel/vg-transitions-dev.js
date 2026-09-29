@@ -1,17 +1,3 @@
-/* DEBUG TEMPORAIRE timing arrivee */
-(function () {
-  var t0 = performance.now();
-  var boot = !!window.__vgBoot;
-  function rep(tag) {
-    var n = performance.getEntriesByType('navigation')[0] || {};
-    var res = performance.getEntriesByType('resource').filter(function (r) { return r.initiatorType === 'script' || r.initiatorType === 'link' || r.initiatorType === 'css'; })
-      .map(function (r) { return r.name.split('/').pop().split('?')[0].slice(0, 24) + ':' + Math.round(r.startTime) + '+' + Math.round(r.duration); }).join(' ');
-    var msg = 'VGT ' + tag + ' ' + location.pathname + ' boot=' + boot + ' devjs@' + Math.round(t0) + ' resp=' + Math.round(n.responseEnd || 0) + ' domInt=' + Math.round(n.domInteractive || 0) + ' dcl=' + Math.round(n.domContentLoadedEventEnd || 0) + ' load=' + Math.round(n.loadEventEnd || 0) + ' now=' + Math.round(performance.now()) + ' || ' + res;
-    setTimeout(function () { throw new Error(msg.slice(0, 1400)); });
-  }
-  window.addEventListener('load', function () { setTimeout(function () { rep('load'); }, 50); });
-})();
-
 (function () {
   var header = document.querySelector('.header');
   if (header) {
@@ -83,22 +69,11 @@
       document.head.appendChild(l);
       vgLog('prefetched', href);
     }
-    if (!productsPreloaded && (href === '/products' || href.indexOf('/products?') === 0)) {
-      productsPreloaded = true;
-      fetch('/products.json').then(function (r) { return r.json(); }).then(function (data) {
-        var list = Array.isArray(data) ? data : ((data && data.products) || []);
-        list.slice(0, 6).forEach(function (p) {
-          if (p.images && p.images[0] && p.images[0].url) {
-            var pl = document.createElement('link');
-            pl.rel = 'preload';
-            pl.as = 'image';
-            pl.href = p.images[0].url;
-            document.head.appendChild(pl);
-          }
-        });
-        vgLog('products images preloaded', list.length);
-      }).catch(function () {});
-    }
+    // [2026-09-29] Plus de prechargement de photos ici : 6 photos en 1000 px
+    // (plusieurs Mo) partaient au survol de PRODUCTS et se battaient avec le
+    // chargement de la page elle-meme au moment du clic (transition vers
+    // PRODUCTS de 2,5 a 3 s). La page Products charge ses vignettes elle-meme,
+    // a la bonne taille.
   }, true);
 
   window.pageTransition = function (opts) {
@@ -189,10 +164,16 @@
           }
         }, aspirateMs + 900);
       } else {
+        // [2026-09-29] Le chargement de la page suivante demarre PENDANT
+        // l'aspiration (apres 150 ms visibles) au lieu d'attendre sa fin :
+        // l'ancienne page reste affichee et continue d'etre aspiree jusqu'a
+        // ce que la nouvelle arrive, le temps serveur se superpose a
+        // l'animation. Section 3 : toute la spirale reste visible (navDelay).
+        var navDelay = opts.navDelay != null ? opts.navDelay : Math.min(aspirateMs, 150);
         setTimeout(function () {
           vgLog('navigating to', href);
           window.location.href = href;
-        }, aspirateMs);
+        }, navDelay);
       }
     }, popMs);
   };
@@ -239,14 +220,11 @@
       setTimeout(finishArrival, ARRIVE_MS + 150);
       document.body.classList.add('vg-arrive');
     }
-    var imgs = document.querySelectorAll('img');
-    var pending = 0;
-    imgs.forEach(function (im) {
-      if (!im.complete) { pending++; im.addEventListener('load', dec, { once: true }); im.addEventListener('error', dec, { once: true }); }
-    });
-    function dec() { pending--; if (pending <= 0) playArrival(); }
-    if (pending === 0) playArrival();
-    setTimeout(playArrival, ARRIVE_CAP_MS);
+    // [2026-09-29] L'arrivee demarre tout de suite, sans attendre aucune
+    // image (brief : duree independante du chargement des images ; les
+    // vignettes visibles recoivent de toute facon leur vraie resolution
+    // immediatement, voir "arrivee nette" plus bas).
+    playArrival();
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', handleArrival); } else { handleArrival(); }
 
@@ -865,6 +843,7 @@ window.__vgTrim = window.__vgTrim || (function () {
       var im = new Image();
       im.crossOrigin = 'anonymous';
       im.decoding = 'async';
+      try { im.fetchPriority = 'low'; } catch (e) {}
       im.onload = function () {
         var box = null;
         try { box = analyse(im); } catch (e) { box = null; }
@@ -1238,7 +1217,8 @@ window.__vgTrim = window.__vgTrim || (function () {
       (function next() {
         if (!urls.length) return;
         idle(function () {
-          urls.splice(0, 4).forEach(function (u) { var im = new Image(); im.decoding = 'async'; im.src = u; TRIM.load(u); });
+          if (window.__vgTransitioning) return; // jamais pendant une transition
+          urls.splice(0, 4).forEach(function (u) { var im = new Image(); im.decoding = 'async'; try { im.fetchPriority = 'low'; } catch (e) {} im.src = u; TRIM.load(u); });
           next();
         });
       })();
@@ -1530,7 +1510,7 @@ window.__vgTrim = window.__vgTrim || (function () {
     var urls = companions(productsNow || [], isCategory, slug, icon);
     window.pageTransition({
       icon: icon, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
-      grow: 1 / GROW, s3: true, popMs: S3_POP_MS, aspirateMs: S3_ASPIRATE_MS,
+      grow: 1 / GROW, s3: true, popMs: S3_POP_MS, aspirateMs: S3_ASPIRATE_MS, navDelay: S3_ASPIRATE_MS,
       onPop: function () { spawnOrbit(urls, x, y, g); }
     });
   }, true);
@@ -1647,3 +1627,30 @@ window.__vgTrim = window.__vgTrim || (function () {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
 
+
+/* === Liens externes (Instagram, TikTok, YouTube...) : nouvel onglet === */
+/* (2026-09-29, check final de Jules : "Voir sur Instagram" sur la fiche */
+/* produit remplacait le site, page blanche ~2 s). Aucun de ces liens ne */
+/* lance de transition. Surveille aussi les liens ajoutes apres coup */
+/* (lecteur de reels du Body). */
+(function () {
+  function external(a) {
+    if (!a.href || a.target === '_blank') return false;
+    try {
+      var u = new URL(a.href, location.href);
+      if (!/^https?:$/.test(u.protocol)) return false;
+      return u.host !== location.host;
+    } catch (e) { return false; }
+  }
+  function mark(root) {
+    (root.querySelectorAll ? root.querySelectorAll('a[href]') : []).forEach(function (a) {
+      if (external(a)) { a.target = '_blank'; a.rel = 'noopener'; }
+    });
+  }
+  mark(document);
+  if (window.MutationObserver) {
+    new MutationObserver(function (ms) {
+      ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) { if (n.tagName === 'A' && external(n)) { n.target = '_blank'; n.rel = 'noopener'; } mark(n); } }); });
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+})();
