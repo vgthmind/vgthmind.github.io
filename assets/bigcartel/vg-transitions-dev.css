@@ -830,6 +830,25 @@ body .product-images{
   .vg-pop{display:none !important;}
 }
 
+/* Zoom plein ecran de la fiche produit : c'est la visionneuse maison du */
+/* Body (.vg-lightbox, travail de nuit) qui s'ouvre au clic, pas PhotoSwipe. */
+/* Dans la DA : verre depoli beige au lieu du voile sombre + photo floutee */
+/* assombrie, ombre douce qui suit la forme. Fleches et croix deja chromees */
+/* (Custom CSS). Les regles PhotoSwipe plus bas restent en secours. */
+html .vg-lightbox{
+  background:rgba(244,242,236,0.58) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(115%) !important;
+  backdrop-filter:blur(22px) saturate(115%) !important;
+}
+html .vg-lightbox .vg-lightbox-backdrop{
+  display:none !important;
+}
+html .vg-lightbox .vg-lightbox-shadow{
+  filter:blur(16px) brightness(0) !important;
+  opacity:0.18 !important;
+  transform:translateY(16px) scale(1.01) !important;
+}
+
 /* Zoom plein ecran de la fiche produit (PhotoSwipe) dans la DA : verre */
 /* depoli beige au lieu du noir, fleches et croix chromees. */
 .pswp{
