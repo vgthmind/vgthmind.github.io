@@ -895,7 +895,6 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Element actuellement sous la souris (suivi explicite : l'etat :hover
   // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
   var overEl = null;
-  function VGDBG(m) { setTimeout(function () { throw new Error('VGDBG ' + m); }); } // DEBUG TEMPORAIRE
   // Liste produits deja arrivee (sinon le pop s'ouvre quand meme, avec
   // l'image affichee, et la 2e photo est ajoutee a l'arrivee des donnees :
   // /products.json est demande plusieurs fois au chargement et peut mettre
@@ -1033,10 +1032,11 @@ window.__vgTrim = window.__vgTrim || (function () {
       }
       return { src: img, rectEl: img, a: rest, b: second, mode: 'fixed' };
     }
-    // Fiche produit : image de la diapo ACTIVE du carrousel, pop sur place
-    // (elle est deja grande) + photo suivante detouree du meme produit.
-    var mainImg = el.querySelector('.splide__slide.is-active img') ||
-      el.querySelector('.zoom-image-container img, img.product-image');
+    // Fiche produit : image REELLEMENT affichee dans la fenetre du carrousel
+    // (la classe is-active peut designer une copie hors ecran du carrousel
+    // en boucle : le pop partait alors hors ecran et une autre diapo restait
+    // visible), pop sur place + photo suivante detouree du meme produit.
+    var mainImg = visibleImg(el);
     if (!mainImg) return null;
     var prod = findProduct(products, slugOf(location.pathname));
     var shown = mainImg.currentSrc || mainImg.src;
@@ -1048,6 +1048,20 @@ window.__vgTrim = window.__vgTrim || (function () {
       for (var q = 0; q < ids.length; q++) { if (ids[q] !== cur) { next = sized(prod.images[ids[q]].url, 1200); break; } }
     }
     return { src: mainImg, rectEl: mainImg, a: shown, b: next, mode: 'inplace' };
+  }
+
+  function visibleImg(el) {
+    var win = el.querySelector('.splide__track') || el;
+    var wr = win.getBoundingClientRect();
+    var best = null, bestA = 0;
+    el.querySelectorAll('.zoom-image-container img, img.product-image').forEach(function (im) {
+      var r = im.getBoundingClientRect();
+      var w = Math.min(r.right, wr.right) - Math.max(r.left, wr.left);
+      var h = Math.min(r.bottom, wr.bottom) - Math.max(r.top, wr.top);
+      var a = (w > 0 && h > 0) ? w * h : 0;
+      if (a > bestA) { bestA = a; best = im; }
+    });
+    return best;
   }
 
   function contentRect(img) {
@@ -1064,7 +1078,6 @@ window.__vgTrim = window.__vgTrim || (function () {
   }
 
   function open(el, d) {
-    if (el.classList.contains('product-images')) { var rr = d.src.getBoundingClientRect(); VGDBG('open rect ' + Math.round(rr.width) + 'x' + Math.round(rr.height) + ' nat ' + d.src.naturalWidth); }
     var boxA = TRIM.get(d.a);
     if (boxA === undefined) TRIM.load(d.a); // pour la prochaine fois
     var r;
@@ -1138,11 +1151,6 @@ window.__vgTrim = window.__vgTrim || (function () {
     void getComputedStyle(box).transform;
     box.classList.add('is-open');
     state.opened = true;
-    if (el.classList.contains('product-images')) setTimeout(function () {
-      var cs = getComputedStyle(box), br = box.getBoundingClientRect();
-      var f = function (im) { if (!im) return 'none'; var c = getComputedStyle(im); return c.opacity + '/' + c.display + '/' + im.naturalWidth + '/' + c.transform.slice(0, 40); };
-      VGDBG('state box ' + cs.display + ' op' + cs.opacity + ' tf' + cs.transform.slice(0, 50) + ' rect ' + Math.round(br.left) + ',' + Math.round(br.top) + ' ' + Math.round(br.width) + ' cls ' + box.className + ' A ' + f(ia) + ' B ' + f(state.ib) + ' SRC ' + getComputedStyle(d.src).opacity + ' z ' + cs.zIndex + ' parent ' + box.parentNode.tagName);
-    }, 1500);
     if (state.ib) scheduleSwap(state, 140);
   }
 
@@ -1163,13 +1171,10 @@ window.__vgTrim = window.__vgTrim || (function () {
   }
 
   function scheduleSwap(state, delay) {
-    var go = function () { VGDBG('go swap cur=' + (current === state) + ' vis=' + document.visibilityState); if (current === state) state.box.classList.add('is-swapped'); };
-    VGDBG('schedule complete=' + state.ib.complete + ' vis=' + document.visibilityState);
     var loaded = state.ib.complete ? Promise.resolve(true) : new Promise(function (res) {
       state.ib.addEventListener('load', function () { res(false); }, { once: true });
     });
     Promise.all([loaded, state.framed]).then(function (v) {
-      VGDBG('ready loaded=' + v[0]);
       if (current !== state) return;
       state.t = setTimeout(go, v[0] ? delay : 60);
     });
@@ -1178,7 +1183,6 @@ window.__vgTrim = window.__vgTrim || (function () {
   function close(instant) {
     var st = current;
     if (!st) return;
-    if (st.el.classList.contains('product-images')) VGDBG('close ' + instant + ' ' + (new Error().stack || '').split(String.fromCharCode(10)).slice(2, 4).join(' | '));
     current = null;
     clearTimeout(st.t);
     var done = function () {
@@ -1243,12 +1247,10 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Ecran tactile (pointeur principal pas une souris) : aucun pop, jamais.
   var FINE = window.matchMedia('(hover: hover) and (pointer: fine)');
   function tryOpen(el) {
-    if (el && el.classList.contains('product-images')) VGDBG('try fine=' + FINE.matches + ' tr=' + !!window.__vgTransitioning + ' pswp=' + !!document.querySelector('.pswp--open'));
     if (!el || !FINE.matches || window.__vgTransitioning || document.querySelector('.pswp--open')) return;
     var target = el;
     watchSlides();
     var d = describe(target, productsNow || []);
-    if (target.classList.contains('product-images')) VGDBG('describe ' + (d ? (d.src.tagName + ' ' + d.mode + ' b=' + !!d.b) : 'null'));
     if (!d) return;
     open(target, d);
     if (!productsNow && !d.b) {
@@ -1291,8 +1293,7 @@ window.__vgTrim = window.__vgTrim || (function () {
     if (!list) return;
     slideWatch = new MutationObserver(function () {
       if (!current || !current.el.classList.contains('product-images')) return;
-      var act = current.el.querySelector('.splide__slide.is-active img');
-      if (act && act !== current.d.src) { VGDBG('slide change close'); close(true); }
+      if (visibleImg(current.el) !== current.d.src) close(true);
     });
     slideWatch.observe(list, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
