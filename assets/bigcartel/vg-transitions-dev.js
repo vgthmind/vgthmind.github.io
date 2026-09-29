@@ -1612,17 +1612,3 @@ window.__vgTrim = window.__vgTrim || (function () {
   }, true);
 })();
 
-/* DEBUG TEMPORAIRE zoom */
-new MutationObserver(function (muts, mo) {
-  var p = document.querySelector('.pswp');
-  if (!p) return;
-  var bg = p.querySelector('.pswp__bg');
-  if (!bg) return;
-  mo.disconnect();
-  var out = [];
-  var e = document.elementFromPoint(20, 200);
-  for (var i = 0; e && i < 7; i++, e = e.parentElement) { var c = getComputedStyle(e); out.push(e.tagName + '.' + String(e.className).slice(0, 30) + '[' + c.backgroundColor + ' op' + c.opacity + ' bf' + c.backdropFilter.slice(0, 20) + ']'); }
-  var cb = getComputedStyle(bg), cp = getComputedStyle(p);
-  var msg = 'VGZ bg ' + cb.backgroundColor + ' op' + cb.opacity + ' inl ' + bg.getAttribute('style') + ' | pswp ' + cp.backgroundColor + ' var ' + cp.getPropertyValue('--pswp-bg') + ' || ' + out.join(' > ');
-  queueMicrotask(function () { throw new Error(msg); });
-}).observe(document.documentElement, { childList: true, subtree: true });
