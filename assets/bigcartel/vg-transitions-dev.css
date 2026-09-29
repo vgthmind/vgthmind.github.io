@@ -39,6 +39,28 @@ html,body{overflow-x:clip !important;}
 @keyframes vg-out-pop{0%{scale:0;opacity:0;}70%{scale:1.1;opacity:1;}100%{scale:1;opacity:1;}}
 @keyframes vg-out-spin-z{from{rotate:0deg;}to{rotate:360deg;}}
 @keyframes vg-out-spin-y{from{rotate:0.35 0.5 1 0deg;}to{rotate:0.35 0.5 1 360deg;}}
+/* SECTION 3 : depart depuis la vignette au repos (scale 1/1,15 -> 1). */
+@keyframes vg-out-grow{from{scale:var(--vg-s0,0.87);opacity:1;}to{scale:1;opacity:1;}}
+#vg-transition-out img{filter:drop-shadow(0 14px 22px rgba(23,23,23,0.22));}
+/* SECTION 3 : aspiration en spirale plus lente et VISIBLE (la page reste */
+/* opaque pendant qu'elle tourne et retrecit vers le vetement, ne s'efface */
+/* qu'a la fin) -- la section 2 (header, validee) garde la sienne. */
+@media (prefers-reduced-motion: no-preference){
+  body.vg-aspirate.vg-s3{animation:vg-aspirate-s3 650ms cubic-bezier(.45,0,.6,1) forwards !important;}
+}
+@keyframes vg-aspirate-s3{
+  0%{transform:perspective(var(--vg-persp,1000px)) rotateX(0deg) rotate(0deg) scale(1);opacity:1;}
+  55%{transform:perspective(var(--vg-persp,1000px)) rotateX(18deg) rotate(-170deg) scale(0.45);opacity:1;}
+  85%{transform:perspective(var(--vg-persp,1000px)) rotateX(30deg) rotate(-330deg) scale(0.12);opacity:0.85;}
+  100%{transform:perspective(var(--vg-persp,1000px)) rotateX(35deg) rotate(-400deg) scale(0.03);opacity:0;}
+}
+/* Au clic : plus aucun effet de survol (gris/flou des voisins). */
+html.vg-s3 .product-list-link,
+html.vg-s3 .product-list-link:hover,
+html.vg-s3 .product-list-container:has(.product-list-link:hover) .product-list-link:not(:hover){
+  opacity:1 !important;
+  filter:none !important;
+}
 
 /* === SECTION 3 : clic produit/categorie -- vraie orbite des vetements */
 /* compagnons autour du vetement clique (voir vgSpawnOrbit() dans le JS, */

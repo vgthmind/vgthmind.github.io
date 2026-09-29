@@ -136,9 +136,13 @@
       img.style.setProperty('--vg-out-y', opts.y + 'px');
     }
     var period = 360 / VG_SPEED;
-    img.style.animationName = 'vg-out-pop, ' + (axis === 'y' ? 'vg-out-spin-y' : 'vg-out-spin-z');
+    // SECTION 3 : l'icone part de la vignette AU REPOS (meme image, meme
+    // taille : scale opts.grow = 1/1,15) et grossit jusqu'a x1,15, au lieu de
+    // surgir de rien (scale 0) comme les icones du header.
+    if (opts.grow) img.style.setProperty('--vg-s0', String(opts.grow));
+    img.style.animationName = (opts.grow ? 'vg-out-grow, ' : 'vg-out-pop, ') + (axis === 'y' ? 'vg-out-spin-y' : 'vg-out-spin-z');
     img.style.animationDuration = popMs + 'ms, ' + period + 's';
-    img.style.animationTimingFunction = 'cubic-bezier(.34,1.56,.64,1), linear';
+    img.style.animationTimingFunction = (opts.grow ? 'cubic-bezier(.22,1,.36,1)' : 'cubic-bezier(.34,1.56,.64,1)') + ', linear';
     img.style.animationIterationCount = '1, infinite';
     img.style.animationFillMode = 'forwards, none';
     overlay.appendChild(img);
@@ -151,6 +155,7 @@
       vgLog('aspirate start');
       document.documentElement.style.setProperty('--vg-persp', persp + 'px');
       if (hasOrigin) document.body.style.setProperty('--vg-origin', opts.x + 'px ' + opts.y + 'px');
+      if (opts.s3) document.body.classList.add('vg-s3');
       document.body.classList.add('vg-aspirate');
       var elapsed = Date.now() - popStart;
       var liveAngle = (elapsed * VG_SPEED / 1000) % 360;
@@ -189,6 +194,9 @@
       if (played) return; played = true;
       vgLog('playing arrival animation');
       document.documentElement.style.setProperty('--vg-persp', (boot.data.persp || 1200) + 'px');
+      // SECTION 3 : la nouvelle page sort du point clique (celui du vetement
+      // qui tourne encore), pas du centre.
+      if (boot.data.x != null && boot.data.y != null) document.body.style.setProperty('--vg-origin', boot.data.x + 'px ' + boot.data.y + 'px');
       overlay.style.transition = 'background-color 250ms ease';
       overlay.style.setProperty('background-color', 'transparent', 'important');
       var finished = false;
@@ -1301,313 +1309,199 @@ window.__vgTrim = window.__vgTrim || (function () {
   window.addEventListener('blur', function () { close(true); });
 })();
 
-/* === SECTION 3 : clic produit/categorie, vraie orbite === */
-/* Meme mecanique que pageTransition() (section 2) : l'icone qui tournoie */
-/* est ici le vetement clique lui-meme (pas une icone generique), et */
-/* l'origine (x, y) est celle de la vignette cliquee au lieu du centre de */
-/* l'ecran -- transporte via le flag sessionStorage existant (pageTransition */
-/* accepte x/y, voir plus haut) pour que l'arrivee sur la page suivante */
-/* reprenne exactement au meme point. */
-/* D'autres vetements (autres produits de la categorie pour un clic */
-/* categorie, autres photos du produit pour un clic produit) tournent en */
-/* vraie orbite circulaire autour du vetement central (au moins un tour */
-/* complet, sens et vitesse reguliers, via Web Animations API sur un */
-/* wrapper de taille nulle positionne au point clique -- faire tourner ce */
-/* wrapper fait mecaniquement orbiter l'enfant positionne a "radius" de */
-/* lui), puis sont aspires avec la page vers ce meme point (le rayon */
-/* effectif retombe a ~0 en fin d'animation via un scale du wrapper vers 0, */
-/* exactement centre sur le point clique). Duree = celle du depart de */
-/* pageTransition() (popMs+aspirateMs, ici allongee vs la section 2 pour */
-/* laisser le temps a un tour complet), total transition ~1.2-1.6s comme le */
-/* header une fois l'arrivee comptee. */
-/* [2026-09-26, vgthmind] Les vraies photos produit hebergees par BigCartel */
-/* sont deja detourees (memes fichiers que la reference locale) -- sauf 12 */
-/* photos precises (NON_CUTOUT ci-dessous), jamais utilisees en orbite. Pas */
-/* de repli mix-blend-mode necessaire pour les autres. Miniatures demandees */
-/* en taille reduite (w/h) plutot que la pleine resolution. */
-/* REMPLACE ENTIEREMENT l'ancien systeme "swirl" (.vg-swirl-tile / */
-/* .vg-center-icon / body.vg-suck-out) : a l'application du lot, supprimer */
-/* du Body le script correspondant (spawnSwirl) et de Custom CSS les regles */
-/* devenues orphelines -- voir APPLIQUER_LOT_A.md. */
+/* === SECTION 3 : clic produit/categorie (CLAUDE.md section 3) === */
+/* Meme mecanique que pageTransition() (section 2) : l'"icone" qui */
+/* tournoie est le vetement clique lui-meme, qui part de la vignette AU */
+/* REPOS (meme image, meme taille, a sa place), grossit x1,15 et tournoie */
+/* sur place ; la page est aspiree en spirale VERS ce point (aspiration */
+/* dediee plus lente et visible, body.vg-s3) ; les autres vetements de la */
+/* categorie / autres photos du produit orbitent autour (rayon et taille */
+/* cales sur le vetement reel grace a window.__vgTrim, cercle garde dans */
+/* l'ecran) puis sont aspires avec la page ; la page suivante sort du meme */
+/* point pendant que le vetement tourne encore (script du <head>). */
+/* Au clic : tout effet de survol est coupe (pop ferme, gris des voisins */
+/* retire, html.vg-s3). Tactile : le tap lance directement la transition. */
+/* prefers-reduced-motion : fondu simple (pageTransition), sans orbite. */
+/* L'ancien systeme "swirl" (Body + Custom CSS) a ete retire le 2026-09-29. */
 (function () {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var GROW = 1.15; // "le vetement grossit legerement" (CLAUDE.md section 3)
-  var SECTION3_POP_MS = 200;
-  var SECTION3_ASPIRATE_MS = 450; // depart total 650ms ; mesure : total ~1.5-1.6s jusqu'a la fin de l'anim d'arrivee (voir AUTOVERIF.md)
-  var ORBIT_MS = SECTION3_POP_MS + SECTION3_ASPIRATE_MS;
-
-  // Photos hebergees par BigCartel connues comme non detourees (fond non
-  // transparent) parmi les vraies photos produit -- signalees par vgthmind le
-  // 2026-09-26 (memes fichiers qu'en reference locale, chantier/assets-photos/
-  // dans le depot prive). Jamais utilisees pour les compagnons en orbite.
-  // Index 0-based dans l'ordre reel de products.json (verifie identique).
-  // Exception : la pochette VGTAPE (cd-vgtape) est carree par nature, pas
-  // de detourage necessaire, jamais dans cette liste.
+  var GROW = 1.15;
+  var S3_POP_MS = 260;      // grossissement x1,15 depuis la vignette
+  var S3_ASPIRATE_MS = 650; // spirale visible ; total ~1,3-1,5 s avec l'arrivee
+  var ORBIT_MS = S3_POP_MS + S3_ASPIRATE_MS;
   var NON_CUTOUT = window.__VG_NON_CUTOUT;
+  var TRIM = window.__vgTrim;
 
-  // Cache partage /products.json : une seule requete pour tout ce module.
-  // Le Body a par ailleurs plusieurs fetch('/products.json') independants
-  // (splash, swirl actuel, dots couleur...) deja releves comme source de
-  // jank a la section 6 point 1/4 -- a consolider sur window.__vgProducts
-  // lors du Lot B, pas fait ici pour rester dans le perimetre de la section 3.
   window.__vgProducts = window.__vgProducts || fetch('/products.json').then(function (r) { return r.json(); }).then(function (data) {
     return Array.isArray(data) ? data : ((data && data.products) || []);
   }).catch(function () { return []; });
+  var productsNow = null;
+  window.__vgProducts.then(function (p) { productsNow = p || []; });
 
+  function slugFrom(href, kind) {
+    var m = (href || '').match(kind === 'category' ? /\/category\/([^\/?#]+)/ : /\/product\/([^\/?#]+)/);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]).normalize('NFC'); } catch (e) { return m[1]; }
+  }
+  function samePermalink(p, slug) {
+    var v = p || '';
+    try { v = decodeURIComponent(v); } catch (e) {}
+    return v.normalize('NFC') === slug;
+  }
+  function pathOf(u) { try { return new URL(u, location.href).pathname; } catch (e) { return (u || '').split('?')[0]; } }
   function cutoutUrls(product) {
     var bad = NON_CUTOUT[product.permalink] || [];
     var out = [];
-    (product.images || []).forEach(function (im, i) {
-      if (bad.indexOf(i) === -1 && im && im.url) out.push(im.url);
-    });
+    (product.images || []).forEach(function (im, i) { if (bad.indexOf(i) === -1 && im && im.url) out.push(im.url); });
     return out;
   }
-
-  // Compare par host+chemin (sans la query ?w=&h=...) apres resolution en
-  // URL absolue : l'icone cliquee vient de bestSrc() (une variante srcset
-  // precise, ex. ?w=320, et toujours resolue en absolu par le navigateur)
-  // alors que products.json donne l'URL "de base" (ex. ?w=1000, parfois
-  // relative en test local) -- une comparaison de chaine stricte ne
-  // matcherait jamais et laisserait passer un doublon du vetement clique
-  // parmi les compagnons.
-  function baseUrl(u) {
-    try {
-      var p = new URL(u, location.href);
-      return p.host + p.pathname;
-    } catch (e) {
-      return (u || '').split('?')[0];
+  function companions(products, isCategory, slug, excludeUrl) {
+    var ex = pathOf(excludeUrl), urls = [];
+    if (isCategory) {
+      products.forEach(function (p) {
+        var inCat = (p.categories || []).some(function (c) { return c.permalink === slug; });
+        if (!inCat) return;
+        var u = cutoutUrls(p)[0];
+        if (u && pathOf(u) !== ex) urls.push(u);
+      });
+    } else {
+      var p = products.filter(function (pr) { return samePermalink(pr.permalink, slug); })[0];
+      if (p) urls = cutoutUrls(p).filter(function (u) { return pathOf(u) !== ex; });
     }
+    for (var i = urls.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = urls[i]; urls[i] = urls[j]; urls[j] = t; }
+    return urls.slice(0, 6);
+  }
+  function small(url, px) {
+    try { var u = new URL(url, location.href); u.searchParams.set('w', String(px)); u.searchParams.set('h', String(px)); return u.toString(); } catch (e) { return url; }
+  }
+  function bgUrl(el) {
+    if (!el) return null;
+    var m = (getComputedStyle(el).backgroundImage || '').match(/url\(["']?(.*?)["']?\)/);
+    return m ? m[1] : null;
+  }
+  function headerBottom() {
+    var hd = document.querySelector('.header');
+    var b = hd ? hd.getBoundingClientRect().bottom : 0;
+    return b > 0 ? b : 0;
   }
 
-  function imagesForCategory(products, slug, excludeUrl) {
-    var urls = [];
-    var excludeBase = baseUrl(excludeUrl);
-    for (var i = 0; i < products.length; i++) {
-      var cats = products[i].categories || [];
-      for (var j = 0; j < cats.length; j++) {
-        if (cats[j].permalink === slug) {
-          var imgs = cutoutUrls(products[i]);
-          if (imgs[0] && baseUrl(imgs[0]) !== excludeBase) urls.push(imgs[0]);
-          break;
-        }
-      }
-    }
-    return urls;
+  // Rectangle reellement occupe par la photo de repos : <img> en contain
+  // (grille) ou fond en contain (tuile).
+  function restRect(el, url) {
+    var r = el.getBoundingClientRect();
+    var ar = null;
+    if (el.tagName === 'IMG' && el.naturalWidth && el.naturalHeight) ar = el.naturalWidth / el.naturalHeight;
+    else { var bx = TRIM && TRIM.get(url); if (bx) ar = bx.ar; }
+    if (!ar || !r.width || !r.height) return { left: r.left, top: r.top, width: r.width, height: r.height };
+    var w = Math.min(r.width, r.height * ar), h = w / ar;
+    return { left: r.left + (r.width - w) / 2, top: r.top + (r.height - h) / 2, width: w, height: h };
   }
 
-  function otherImagesForProduct(products, slug, excludeUrl) {
-    var p = products.filter(function (pr) { return pr.permalink === slug; })[0];
-    if (!p) return [];
-    var excludeBase = baseUrl(excludeUrl);
-    return cutoutUrls(p).filter(function (u) { return baseUrl(u) !== excludeBase; });
-  }
-
-  function shuffle(arr) {
-    for (var i = arr.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-    }
-    return arr;
-  }
-
-  // Image nette la plus proche disponible sur un <img> lazysize (evite de
-  // partir du placeholder blur-up ?w=20 si data-srcset offre mieux).
-  function bestSrc(img) {
-    if (!img) return null;
-    var cur = img.currentSrc || img.src || '';
-    if (cur && cur.indexOf('w=20') === -1) return cur;
-    var srcset = img.getAttribute('data-srcset') || img.getAttribute('srcset');
-    if (srcset) {
-      var entries = srcset.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-      if (entries.length) {
-        var last = entries[entries.length - 1].split(/\s+/)[0];
-        if (last) return last;
-      }
-    }
-    return cur || null;
-  }
-
-  // Redimensionne une URL image BigCartel (?...&w=&h=...) a une taille plus
-  // adaptee aux miniatures en orbite (demande de vgthmind : "taille adaptee").
-  function resizeUrl(url, size) {
-    try {
-      var u = new URL(url, location.href);
-      if (u.searchParams.has('w')) u.searchParams.set('w', size);
-      if (u.searchParams.has('h')) u.searchParams.set('h', size);
-      return u.toString();
-    } catch (e) { return url; }
-  }
-
-  // Vraie orbite : un wrapper de taille nulle place au point clique tourne
-  // (Web Animations API, vitesse lineaire = reguliere) ; l'image, positionnee
-  // a "radius" de ce wrapper, decrit donc un vrai cercle autour du point
-  // clique en tournant avec lui. Le scale du wrapper (1 -> ~0.05 en fin
-  // d'animation) ramene le rayon effectif vers 0 exactement sur ce point :
-  // c'est l'aspiration avec la page. La rotation propre de l'image (2e
-  // animation, meme axe/perspective que le vetement central) donne la
-  // "legere perspective coherente" demandee.
-  function vgSpawnOrbit(urls, x, y, baseSize, axis, persp) {
-    if (reduceMotion || !urls || !urls.length) return;
-    var n = Math.min(6, urls.length);
-    var dir = 1;
-    // BUG (releve le 2026-09-27 par extraction/inspection directe des frames
-    // video, la video etant la seule preuve valable -- cf. consigne de
-    // vgthmind) : le rayon d'origine (baseSize * 0.85-1.11, ex. ~450px pour une
-    // vignette de grille 322x498) depassait largement la distance entre le
-    // point clique et les bords du viewport des que ce point n'etait pas
-    // pile au centre de l'ecran (cas normal pour une grille) -- l'essentiel
-    // du cercle sortait alors du viewport et les compagnons n'etaient
-    // quasiment jamais visibles a l'image, meme si le calcul d'orbite
-    // lui-meme (angle, vitesse) etait correct. Plafonne desormais a une
-    // fraction de la plus petite dimension du viewport pour garantir que le
-    // cercle complet reste visible quel que soit l'endroit clique.
-    var maxRadius = Math.max(70, Math.min(window.innerWidth, window.innerHeight) * 0.24);
+  // Orbite : un pivot de taille nulle au point clique tourne (au moins un
+  // tour) ; chaque compagnon, place a "radius" du pivot, decrit un vrai
+  // cercle autour du vetement ; le pivot retrecit vers 0 en fin
+  // d'animation = aspires avec la page vers ce point. Rayon et taille
+  // proportionnels au vetement REEL (rogne), cercle garde dans l'ecran.
+  function spawnOrbit(urls, x, y, g) {
+    if (reduceMotion || !urls.length) return;
+    var n = urls.length;
+    var tile = Math.max(44, Math.round(g * 0.42));
+    var want = g * 0.5 + tile * 0.75;
+    var room = Math.min(x, window.innerWidth - x, y - headerBottom(), window.innerHeight - y) - tile * 0.55;
+    var radius = Math.max(g * 0.55, Math.min(want, room));
     for (var i = 0; i < n; i++) {
-      (function (i) {
-        var wrap = document.createElement('div');
-        wrap.className = 'vg-orbit-wrap';
-        wrap.style.left = x + 'px';
-        wrap.style.top = y + 'px';
-
-        var tile = document.createElement('img');
-        tile.className = 'vg-orbit-tile';
-        tile.src = resizeUrl(urls[i], 240);
-        tile.alt = '';
-        var radius = Math.min(baseSize * (0.55 + (i % 3) * 0.12 + Math.random() * 0.06), maxRadius);
-        var size = Math.max(36, Math.min(Math.round(baseSize * 0.32), Math.round(radius * 0.75)));
-        tile.style.width = size + 'px';
-        tile.style.height = size + 'px';
-        tile.style.left = radius + 'px';
-        wrap.appendChild(tile);
-        document.documentElement.appendChild(wrap);
-
-        var startAngle = (i / n) * 360 + (Math.random() * 16 - 8);
-        var sweep = dir * (368 + Math.random() * 24); // "au moins un tour complet"
-        var mid1 = startAngle + sweep * 0.12;
-        var mid2 = startAngle + sweep * 0.85;
-        var endAngle = startAngle + sweep;
-
-        if (wrap.animate) {
-          wrap.animate([
-            { transform: 'rotate(' + startAngle + 'deg) scale(0.3)', opacity: 0, offset: 0 },
-            { transform: 'rotate(' + mid1 + 'deg) scale(1)', opacity: 1, offset: 0.1 },
-            { transform: 'rotate(' + mid2 + 'deg) scale(1)', opacity: 1, offset: 0.85 },
-            { transform: 'rotate(' + endAngle + 'deg) scale(0.05)', opacity: 0, offset: 1 }
-          ], { duration: ORBIT_MS, easing: 'linear', fill: 'forwards' });
-
-          tile.animate([
-            { transform: 'perspective(' + persp + 'px) rotate' + (axis === 'y' ? 'Y' : 'Z') + '(0deg) translateY(-50%)' },
-            { transform: 'perspective(' + persp + 'px) rotate' + (axis === 'y' ? 'Y' : 'Z') + '(' + (dir * 130) + 'deg) translateY(-50%)' }
-          ], { duration: ORBIT_MS, easing: 'linear', fill: 'forwards' });
-        }
-
-        setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, ORBIT_MS + 60);
-      })(i);
+      var wrap = document.createElement('div');
+      wrap.className = 'vg-orbit-wrap';
+      wrap.style.left = x + 'px';
+      wrap.style.top = y + 'px';
+      var im = document.createElement('img');
+      im.className = 'vg-orbit-tile';
+      im.alt = '';
+      im.src = small(urls[i], 300);
+      im.style.width = tile + 'px';
+      im.style.height = tile + 'px';
+      im.style.left = (radius - tile / 2) + 'px';
+      im.style.marginTop = (-tile / 2) + 'px';
+      wrap.appendChild(im);
+      document.documentElement.appendChild(wrap);
+      var a0 = (i / n) * 360;
+      var sweep = 380;
+      if (wrap.animate) {
+        wrap.animate([
+          { transform: 'rotate(' + a0 + 'deg) scale(0.35)', opacity: 0, offset: 0 },
+          { transform: 'rotate(' + (a0 + sweep * 0.14) + 'deg) scale(1)', opacity: 1, offset: 0.14 },
+          { transform: 'rotate(' + (a0 + sweep * 0.78) + 'deg) scale(1)', opacity: 1, offset: 0.78 },
+          { transform: 'rotate(' + (a0 + sweep) + 'deg) scale(0.04)', opacity: 0, offset: 1 }
+        ], { duration: ORBIT_MS, easing: 'linear', fill: 'forwards' });
+        // chaque compagnon tournoie aussi sur lui-meme
+        im.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(' + (i % 2 ? -200 : 200) + 'deg)' }], { duration: ORBIT_MS, easing: 'linear', fill: 'forwards' });
+      }
+      (function (w) { setTimeout(function () { if (w.parentNode) w.remove(); }, ORBIT_MS + 80); })(wrap);
     }
   }
 
-  function vgClearSelection() {
-    try { window.getSelection().removeAllRanges(); } catch (e) {}
-  }
-
-  function categorySlug(href) { var m = href.match(/\/category\/([^\/?#]+)/); return m ? m[1] : null; }
-  function productSlug(href) { var m = href.match(/\/product\/([^\/?#]+)/); return m ? m[1] : null; }
-
-  var prefetchedPages = {};
+  // Prechargement au survol : page suivante + compagnons (sinon ils
+  // arrivent vides pendant les premieres centaines de ms de l'orbite).
+  var prefetched = {};
   document.addEventListener('mouseover', function (e) {
     var link = e.target.closest ? e.target.closest('.product-list-link, .vg-category-tile') : null;
     if (!link) return;
     var href = link.getAttribute('href');
-    if (!href || prefetchedPages[href]) return;
-    prefetchedPages[href] = true;
+    if (!href || prefetched[href]) return;
+    prefetched[href] = true;
     var l = document.createElement('link');
     l.rel = 'prefetch';
     l.href = href;
     document.head.appendChild(l);
+    Promise.resolve(window.__vgProducts).then(function (products) {
+      var isCat = link.classList.contains('vg-category-tile');
+      companions(products || [], isCat, slugFrom(href, isCat ? 'category' : 'product'), '').forEach(function (u) { var im = new Image(); im.src = small(u, 300); });
+    });
   }, true);
+
+  // Retour arriere (bfcache) : rien ne doit rester masque ni coupe.
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    document.documentElement.classList.remove('vg-s3');
+    if (document.body) document.body.classList.remove('vg-s3');
+    document.querySelectorAll('.vg-pop-hidden').forEach(function (el) { el.classList.remove('vg-pop-hidden'); });
+  });
 
   document.addEventListener('click', function (e) {
     var link = e.target.closest ? e.target.closest('.product-list-link, .vg-category-tile') : null;
     if (!link) return;
     var href = link.getAttribute('href');
-    if (!href || href.charAt(0) === '#' || link.target === '_blank') return;
+    if (!href || href.charAt(0) === '#' || link.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
     if (window.__vgTransitioning) { e.preventDefault(); return; }
-
     var isCategory = link.classList.contains('vg-category-tile');
-    var iconUrl = null;
-    if (isCategory) {
-      // BUG (releve le 2026-09-27 par comparaison vignette/popup a la
-      // video -- cf. consigne de vgthmind) : ce selecteur matchait aussi bien
-      // le calque de base (.vg-category-tile-img) que le calque de survol
-      // (.vg-category-tile-img.vg-category-tile-img-alt), les deux
-      // partageant la classe de base -- querySelector renvoyait le premier
-      // du DOM (le calque de base, en principe stable), mais un survol reel
-      // ou simule par un clic automatise peut avoir deja fait passer le
-      // calque alt a opacity:1 par-dessus au moment du clic, creant un saut
-      // visible entre ce qui est affiche a l'ecran et l'image reprise par
-      // le popup. On exclut maintenant explicitement le calque alt pour
-      // etre certain de toujours lire l'image de repos.
-      var bgEl = link.querySelector('.vg-category-tile-img:not(.vg-category-tile-img-alt)');
-      if (bgEl) {
-        var bg = getComputedStyle(bgEl).backgroundImage;
-        var m = bg && bg.match(/url\(["']?(.*?)["']?\)/);
-        iconUrl = m ? m[1] : null;
-      }
-    } else {
-      iconUrl = bestSrc(link.querySelector('img.product-list-image, img'));
-    }
-    // Pas d'icone trouvee (structure inattendue) -> navigation normale,
-    // pas de transition plutot qu'un effet casse.
-    if (!iconUrl) return;
-
+    var srcEl = isCategory
+      ? link.querySelector('.vg-category-tile-img:not(.vg-category-tile-img-alt)')
+      : (link.querySelector('img.product-list-image') || link.querySelector('.product-list-image-container img'));
+    if (!srcEl) return;
+    // Image de REPOS affichee (deja chargee = aucun saut, aucun flash).
+    var icon = isCategory ? bgUrl(srcEl) : (srcEl.currentSrc || srcEl.src);
+    if (!icon || icon.indexOf('w=20') !== -1) return; // placeholder flou : navigation normale
     e.preventDefault();
-    vgClearSelection();
+    try { window.getSelection().removeAllRanges(); } catch (err) {}
+    // Coupe tout effet de survol (le pop est deja ferme par son propre
+    // ecouteur de clic, enregistre avant celui-ci).
+    document.documentElement.classList.add('vg-s3');
 
-    var rect = link.getBoundingClientRect();
-    var x = rect.left + rect.width / 2;
-    var y = rect.top + rect.height / 2;
-    var baseSize = Math.max(rect.width, rect.height);
-    var w = Math.round(rect.width * GROW);
-    var h = Math.round(rect.height * GROW);
+    var r = restRect(srcEl, icon);
+    var x = r.left + r.width / 2, y = r.top + r.height / 2;
+    var w = Math.round(r.width * GROW), h = Math.round(r.height * GROW);
+    var g = Math.max(r.width, r.height) * GROW;
+    var bx = TRIM && TRIM.get(icon);
+    if (bx) g = TRIM.garment(bx, { left: 0, top: 0, width: w, height: h }).size;
+    // La vignette d'origine disparait sous l'icone qui la remplace.
+    srcEl.classList.add('vg-pop-hidden');
 
-    // Les compagnons doivent etre pretes AVANT le pop pour demarrer leur
-    // orbite en meme temps que l'icone centrale (visibles pendant toute
-    // l'aspiration, brief CLAUDE.md) -- on attend donc la resolution de
-    // /products.json avant d'appeler pageTransition(). window.__vgProducts
-    // est lance des le chargement du script, donc deja resolu au moment du
-    // clic dans la quasi-totalite des cas (microtask, pas de delai percu) ;
-    // si jamais il ne l'est pas encore, la transition demarre simplement
-    // des que pret plutot que sans compagnons.
-    var slug = isCategory ? categorySlug(href) : productSlug(href);
-
-    window.__vgProducts.then(function (products) {
-      // BUG (releve le 2026-09-27 -- meme cause que ci-dessus pour les
-      // categories) : pour un produit, bestSrc() lit currentSrc en direct
-      // sur l'<img> du DOM, qui peut deja avoir ete permute par le script
-      // hover existant du theme (mouseenter -> img.src = 2e photo, voir
-      // markup genere) avant meme que le clic parte -- resultat : le
-      // vetement qui pop n'est pas celui de la vignette de repos. On relit
-      // l'image "de repos" (images[0]) directement dans products.json,
-      // qui est la source de verite deja utilisee pour les compagnons et
-      // ne depend d'aucun etat de survol.
-      var restIcon = iconUrl;
-      if (!isCategory) {
-        var clickedProduct = products.filter(function (p) { return p.permalink === slug; })[0];
-        if (clickedProduct && clickedProduct.images && clickedProduct.images[0] && clickedProduct.images[0].url) {
-          restIcon = clickedProduct.images[0].url;
-        }
-      }
-
-      var orbitUrls = isCategory
-        ? imagesForCategory(products, slug, restIcon)
-        : otherImagesForProduct(products, slug, restIcon);
-      orbitUrls = shuffle(orbitUrls.slice());
-
-      window.pageTransition({
-        icon: restIcon, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
-        popMs: SECTION3_POP_MS, aspirateMs: SECTION3_ASPIRATE_MS,
-        onPop: function () { vgSpawnOrbit(orbitUrls, x, y, baseSize, 'z', 1000); }
-      });
+    var slug = slugFrom(href, isCategory ? 'category' : 'product');
+    var urls = companions(productsNow || [], isCategory, slug, icon);
+    window.pageTransition({
+      icon: icon, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
+      grow: 1 / GROW, s3: true, popMs: S3_POP_MS, aspirateMs: S3_ASPIRATE_MS,
+      onPop: function () { spawnOrbit(urls, x, y, g); }
     });
   }, true);
 })();
