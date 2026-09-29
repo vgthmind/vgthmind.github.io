@@ -182,8 +182,6 @@
     var boot = window.__vgBoot;
     if (!boot) { vgLog('no boot state on arrival'); window.__vgTransitioning = false; return; }
     vgLog('arrival detected, liveAngle=', boot.liveAngle);
-    // DEBUG TEMPORAIRE B1 (mesure de la transition) - a retirer
-    try { var vgN0 = performance.getEntriesByType('navigation')[0]; var vgMsg = 'VGT to=' + location.pathname + ' from=' + (document.referrer || '').replace(/^https?:\/\/[^\/]+/, '') + ' dep=' + Math.round(performance.timeOrigin - boot.data.ts) + ' resp=' + Math.round(vgN0.responseEnd) + ' exec=' + Math.round(performance.now()); setTimeout(function () { throw new Error(vgMsg); }); } catch (e) {}
     var overlay = boot.overlay || document.getElementById('vg-transition-boot');
     if (!overlay) { window.__vgTransitioning = false; return; }
     var played = false;
