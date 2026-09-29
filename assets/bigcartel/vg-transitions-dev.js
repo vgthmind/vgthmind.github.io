@@ -1158,11 +1158,13 @@ window.__vgTrim = window.__vgTrim || (function () {
   }
 
   function scheduleSwap(state, delay) {
-    var go = function () { if (current === state) state.box.classList.add('is-swapped'); };
+    var go = function () { VGDBG('go swap cur=' + (current === state) + ' vis=' + document.visibilityState); if (current === state) state.box.classList.add('is-swapped'); };
+    VGDBG('schedule complete=' + state.ib.complete + ' vis=' + document.visibilityState);
     var loaded = state.ib.complete ? Promise.resolve(true) : new Promise(function (res) {
       state.ib.addEventListener('load', function () { res(false); }, { once: true });
     });
     Promise.all([loaded, state.framed]).then(function (v) {
+      VGDBG('ready loaded=' + v[0]);
       if (current !== state) return;
       state.t = setTimeout(go, v[0] ? delay : 60);
     });
