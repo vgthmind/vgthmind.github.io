@@ -182,6 +182,12 @@
     var boot = window.__vgBoot;
     if (!boot) { vgLog('no boot state on arrival'); window.__vgTransitioning = false; return; }
     vgLog('arrival detected, liveAngle=', boot.liveAngle);
+    // [2026-09-29 finale] Nouveau boot du <head> (Layout) : la page s'affiche
+    // deja sous l'icone des le premier rendu (fondu sur place, sans attendre
+    // les scripts du theme ni les images) et l'icone se retire toute seule.
+    // L'ancienne entree en spirale (rotation + echelle du body, qui faisait
+    // traverser l'ecran au titre) n'est plus jouee.
+    if (boot.early) { vgLog('arrival handled by head boot'); return; }
     var overlay = boot.overlay || document.getElementById('vg-transition-boot');
     if (!overlay) { window.__vgTransitioning = false; return; }
     var played = false;
@@ -729,6 +735,7 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
         v.playsInline = true;
         // Safari iOS : attributs HTML en plus des proprietes (lecture inline, sans son)
         v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+        v.defaultMuted = true;
         v.preload = 'auto';
         splash.appendChild(v);
       });
@@ -1512,7 +1519,7 @@ window.__vgTrim = window.__vgTrim || (function () {
     var urls = companions(productsNow || [], isCategory, slug, icon);
     window.pageTransition({
       icon: icon, href: href, x: x, y: y, w: w, h: h, axis: 'z', persp: 1000,
-      grow: 1 / GROW, s3: true, popMs: S3_POP_MS, aspirateMs: S3_ASPIRATE_MS, navDelay: S3_ASPIRATE_MS,
+      grow: 1 / GROW, s3: true, popMs: S3_POP_MS, aspirateMs: S3_ASPIRATE_MS, navDelay: 150,
       onPop: function () { spawnOrbit(urls, x, y, g); }
     });
   }, true);
@@ -1576,13 +1583,57 @@ window.__vgTrim = window.__vgTrim || (function () {
   var root = document.documentElement;
   function upd() {
     if (hd.classList.contains('vg-scrolled')) return;
-    var h = Math.round(hd.getBoundingClientRect().height);
+    // offsetHeight = hauteur de mise en page, insensible aux transformations
+    // (le body tourne/rapetisse pendant les transitions : getBoundingClientRect
+    // renverrait la taille deformee).
+    var h = hd.offsetHeight;
     if (h > 0) root.style.setProperty('--vg-header-h', h + 'px');
   }
   upd();
   if (window.ResizeObserver) new ResizeObserver(upd).observe(hd);
   window.addEventListener('resize', upd);
   window.addEventListener('load', upd);
+})();
+
+/* === Videos en lecture automatique (Studio, fiches produit, splash) === */
+/* Safari iOS : sans son + inline + autoplay + loop en attributs ET en */
+/* proprietes (defaultMuted compris), play() rappele au chargement des */
+/* donnees, a l'entree a l'ecran (appel de la page) et au premier toucher. */
+/* Si iOS refuse (economie d'energie), la classe vg-reel-failed reste sur le */
+/* conteneur (image fixe propre, le bouton natif est masque en CSS). */
+window.vgAutoplay = function (v, box) {
+  v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
+  ['muted', 'playsinline', 'webkit-playsinline', 'autoplay', 'loop'].forEach(function (a) { v.setAttribute(a, ''); });
+  function ok() { if (box) box.classList.remove('vg-reel-failed'); }
+  function fail() { if (box && v.paused) box.classList.add('vg-reel-failed'); }
+  v.vgTryPlay = function () {
+    if (!v.src && !v.currentSrc) return;
+    var pr; try { pr = v.play(); } catch (e) { fail(); return; }
+    if (pr && pr.then) pr.then(ok, fail);
+  };
+  if (box) box.classList.add('vg-reel-failed'); // image fixe jusqu'a la 1re image jouee
+  v.addEventListener('playing', ok);
+  v.addEventListener('loadeddata', function () { v.vgTryPlay(); });
+  document.addEventListener('touchstart', function () { if (v.paused) v.vgTryPlay(); }, { once: true, passive: true });
+};
+(function () {
+  // Videos des fiches produit (lecteur de reels du Body, deja muted/autoplay/
+  // loop) : meme traitement, en gardant leur barre de controle.
+  function fix(v) {
+    if (v.vgTryPlay) return;
+    window.vgAutoplay(v, null);
+    v.vgTryPlay();
+  }
+  if (!/^\/product\//.test(location.pathname)) return;
+  var mo = new MutationObserver(scan);
+  function scan() {
+    var vs = document.querySelectorAll('video.ig-reel-video');
+    vs.forEach(fix);
+    if (vs.length) mo.disconnect();
+  }
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+  setTimeout(function () { mo.disconnect(); }, 15000);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();
 })();
 
 /* === PAGE STUDIO : video d'atelier (8,6 s, sans son, en boucle) === */
@@ -1608,15 +1659,20 @@ window.__vgTrim = window.__vgTrim || (function () {
       box.appendChild(im);
     } else {
       var v = document.createElement('video');
-      v.muted = true; v.loop = true; v.playsInline = true;
-      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('aria-hidden', 'true');
-      v.autoplay = true; v.setAttribute('autoplay', '');
+      v.setAttribute('aria-hidden', 'true');
       v.preload = 'none';
       v.poster = poster;
+      // Image fixe propre (sans aucun bouton) si iOS refuse la lecture
+      // automatique (mode economie d'energie) : affichee tant que la video
+      // ne joue pas vraiment.
+      var still = document.createElement('img');
+      still.className = 'vg-reel-still'; still.src = poster; still.alt = '';
       box.appendChild(v);
+      box.appendChild(still);
+      window.vgAutoplay(v, box);
       var start = function () {
         if (!v.src) v.src = BASE + 'studio-atelier.mp4';
-        var pr = v.play(); if (pr && pr.catch) pr.catch(function () {});
+        v.vgTryPlay();
       };
       if ('IntersectionObserver' in window) {
         new IntersectionObserver(function (es) {

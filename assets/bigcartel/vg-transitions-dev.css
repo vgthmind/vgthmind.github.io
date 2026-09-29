@@ -1038,3 +1038,65 @@ main h1, main h2, main [id]{scroll-margin-top:calc(var(--vg-header-h, var(--head
   box-shadow:0 3px 0 #6f7379, 0 6px 12px rgba(0,0,0,0.14) !important;
   white-space:nowrap !important;
 }
+
+/* [2026-09-29 finale] Header fixe des le premier rendu. Le theme ne pose */
+/* header.fixed qu'au window.load (apres TOUTES les images) : avant, le */
+/* header etait dans le flux EN PLUS du padding-top du body (hauteur comptee */
+/* deux fois), puis tout remontait d'un coup au chargement des images. */
+header.header{position:fixed !important;top:0 !important;left:0 !important;}
+/* Arrivee d'une transition : la page apparait sur place, en fondu, sous */
+/* l'icone qui tourne encore (classe posee par le boot du <head>). */
+@keyframes vg-arrive-fade{from{opacity:0;}to{opacity:1;}}
+html.vg-arriving body{animation:vg-arrive-fade 320ms ease both !important;}
+/* Videos en lecture automatique : jamais le gros bouton lecture natif */
+/* d'iOS par-dessus. Studio (et splash) : aucun controle natif ; si la */
+/* lecture est refusee, image fixe propre (.vg-reel-still). Fiches produit : */
+/* barre de controle gardee, seul le gros bouton central est masque. */
+.vg-studio-reel video::-webkit-media-controls-start-playback-button,
+.vg-splash-video::-webkit-media-controls-start-playback-button,
+video.ig-reel-video::-webkit-media-controls-start-playback-button{display:none !important;-webkit-appearance:none !important;}
+.vg-studio-reel video::-webkit-media-controls,
+.vg-splash-video::-webkit-media-controls{display:none !important;}
+.vg-studio-reel .vg-reel-still{opacity:0;pointer-events:none;transition:opacity .25s ease;}
+.vg-studio-reel.vg-reel-failed .vg-reel-still{opacity:1;}
+/* [2026-09-29 finale] « Sold out » (et « Coming soon ») lisibles, dans la DA : */
+/* pill chromee comme celles du header et des separateurs ENGLISH/FRANCAIS. */
+/* Grilles (.product-list-thumb-status) et fiche produit (.product-status). */
+.product-list-thumb-status.status-secondary,
+.product-status.status-secondary{
+  display:inline-block !important;
+  font-family:'IBM Plex Mono',monospace !important;
+  font-weight:600 !important;
+  letter-spacing:0.14em !important;
+  text-transform:uppercase !important;
+  color:#1f2022 !important;
+  border-radius:999px !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 2px 0 #6f7379, 0 4px 10px rgba(0,0,0,0.12) !important;
+  white-space:nowrap !important;
+  line-height:1.2 !important;
+}
+.product-list-thumb-status.status-secondary{font-size:10px !important;padding:5px 12px !important;margin-top:6px !important;}
+.product-status.status-secondary{font-size:11px !important;padding:6px 14px !important;}
+/* [2026-09-29 finale] Page panier : bouton Checkout et sous-total dans la */
+/* meme typo que les pills du site (comme ADD TO CART). Le checkout lui-meme */
+/* (pages BigCartel) n'est pas touche. */
+.button--checkout{
+  font-family:'IBM Plex Mono',monospace !important;
+  font-weight:600 !important;
+  letter-spacing:0.14em !important;
+  text-transform:uppercase !important;
+  font-size:13px !important;
+}
+.cart-subtotal__label,
+.cart-subtotal__amount{
+  font-family:'IBM Plex Mono',monospace !important;
+  letter-spacing:0.08em !important;
+}
+.cart-subtotal__label{text-transform:uppercase !important;font-size:0.85em !important;}
+/* [2026-09-29 finale] Fiche produit : avant l'initialisation du carrousel */
+/* (theme.js), le theme ecrase TOUTES les slides a 0 px (aucune n'est encore */
+/* .is-active) -> les vignettes remontaient puis redescendaient (~375 px sur */
+/* iPhone) maintenant que la page s'affiche avant les scripts. La 1re slide */
+/* reserve sa taille finale des le premier rendu. */
+.product-carousel:not(.is-initialized) .splide__slide:first-child{height:auto !important;width:100% !important;}
