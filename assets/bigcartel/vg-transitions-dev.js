@@ -895,6 +895,7 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Element actuellement sous la souris (suivi explicite : l'etat :hover
   // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
   var overEl = null;
+  function VGDBG(m) { setTimeout(function () { throw new Error('VGDBG ' + m); }); } // DEBUG TEMPORAIRE
   // Liste produits deja arrivee (sinon le pop s'ouvre quand meme, avec
   // l'image affichee, et la 2e photo est ajoutee a l'arrivee des donnees :
   // /products.json est demande plusieurs fois au chargement et peut mettre
@@ -1063,6 +1064,7 @@ window.__vgTrim = window.__vgTrim || (function () {
   }
 
   function open(el, d) {
+    if (el.classList.contains('product-images')) { var rr = d.src.getBoundingClientRect(); VGDBG('open rect ' + Math.round(rr.width) + 'x' + Math.round(rr.height) + ' nat ' + d.src.naturalWidth); }
     var boxA = TRIM.get(d.a);
     if (boxA === undefined) TRIM.load(d.a); // pour la prochaine fois
     var r;
@@ -1169,6 +1171,7 @@ window.__vgTrim = window.__vgTrim || (function () {
   function close(instant) {
     var st = current;
     if (!st) return;
+    if (st.el.classList.contains('product-images')) VGDBG('close ' + instant + ' ' + (new Error().stack || '').split(String.fromCharCode(10)).slice(2, 4).join(' | '));
     current = null;
     clearTimeout(st.t);
     var done = function () {
@@ -1233,9 +1236,12 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Ecran tactile (pointeur principal pas une souris) : aucun pop, jamais.
   var FINE = window.matchMedia('(hover: hover) and (pointer: fine)');
   function tryOpen(el) {
+    if (el && el.classList.contains('product-images')) VGDBG('try fine=' + FINE.matches + ' tr=' + !!window.__vgTransitioning + ' pswp=' + !!document.querySelector('.pswp--open'));
     if (!el || !FINE.matches || window.__vgTransitioning || document.querySelector('.pswp--open')) return;
     var target = el;
+    watchSlides();
     var d = describe(target, productsNow || []);
+    if (target.classList.contains('product-images')) VGDBG('describe ' + (d ? (d.src.tagName + ' ' + d.mode + ' b=' + !!d.b) : 'null'));
     if (!d) return;
     open(target, d);
     if (!productsNow && !d.b) {
@@ -1271,9 +1277,18 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Carrousel de la fiche produit : des qu'une diapo bouge (fleche, clavier,
   // glisser), le pop disparait -- jamais de pop qui glisse avec la diapo. Il
   // revient au prochain mouvement de souris, sur la nouvelle diapo active.
-  document.addEventListener('transitionstart', function (e) {
-    if (current && e.target && e.target.classList && e.target.classList.contains('splide__list')) close(true);
-  }, true);
+  var slideWatch = null;
+  function watchSlides() {
+    if (slideWatch || !window.MutationObserver) return;
+    var list = document.querySelector('.product-images .splide__list');
+    if (!list) return;
+    slideWatch = new MutationObserver(function () {
+      if (!current || !current.el.classList.contains('product-images')) return;
+      var act = current.el.querySelector('.splide__slide.is-active img');
+      if (act && act !== current.d.src) { VGDBG('slide change close'); close(true); }
+    });
+    slideWatch.observe(list, { attributes: true, subtree: true, attributeFilter: ['class'] });
+  }
   window.addEventListener('blur', function () { close(true); });
 })();
 
