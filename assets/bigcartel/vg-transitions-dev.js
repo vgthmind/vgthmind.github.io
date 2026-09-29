@@ -1366,7 +1366,20 @@ window.__vgTrim = window.__vgTrim || (function () {
       });
     } else {
       var p = products.filter(function (pr) { return samePermalink(pr.permalink, slug); })[0];
-      if (p) urls = cutoutUrls(p).filter(function (u) { return pathOf(u) !== ex; });
+      if (p) {
+        urls = cutoutUrls(p).filter(function (u) { return pathOf(u) !== ex; });
+        // Peu de photos (souvent 2 : face/dos) = un seul compagnon, a peine
+        // visible : on complete avec des vetements de la meme categorie.
+        if (urls.length < 4) {
+          var cats = (p.categories || []).map(function (c) { return c.permalink; }).filter(function (c) { return c !== 'all' && c !== 'latest-drop'; });
+          products.forEach(function (o) {
+            if (urls.length >= 6 || o === p) return;
+            if (!(o.categories || []).some(function (c) { return cats.indexOf(c.permalink) !== -1; })) return;
+            var u = cutoutUrls(o)[0];
+            if (u && pathOf(u) !== ex) urls.push(u);
+          });
+        }
+      }
     }
     for (var i = urls.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = urls[i]; urls[i] = urls[j]; urls[j] = t; }
     return urls.slice(0, 6);
