@@ -627,7 +627,7 @@ body #navigation-modal .page_list li a[href*="/contact"]::before{
 body #navigation-modal .page_list li a[href$="/products"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/products-icon.png");}
 body #navigation-modal .page_list li a[href*="infos-conditions-generales"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/info-icon.png");}
 body #navigation-modal .page_list li a[href*="/contact"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/contact-icon.png");}
-body #navigation-modal .page_list li a[href*="/studio"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/studio-icon.png");}
+body #navigation-modal .page_list li a[href*="/studio"]::before{background-image:url("https://vgthmind.github.io/assets/bigcartel/studio-icon.png");width:56px;margin-right:-8px;}
 body #navigation-modal .page_list--main li a::after,
 body #navigation-modal .page_list--pages li a::after{
   content:'';
