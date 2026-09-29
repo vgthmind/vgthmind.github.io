@@ -1595,6 +1595,34 @@ window.__vgTrim = window.__vgTrim || (function () {
   window.addEventListener('load', upd);
 })();
 
+/* === Textes alternatifs + decodage asynchrone des images (2026-09-29) === */
+/* Les gabarits par defaut du theme laissent alt="" sur les vignettes des */
+/* grilles, les tuiles de categories et les miniatures de la fiche produit. */
+/* On y met le nom du produit / de la categorie (titre du lien), sans */
+/* toucher aux gabarits (ils restent ceux du theme, mis a jour par BigCartel). */
+/* decoding="async" sur les images chargees en differe : jamais de blocage */
+/* de l'affichage sur le decodage d'une image. */
+(function () {
+  function run() {
+    document.querySelectorAll('a.product-list-link').forEach(function (a) {
+      var n = a.querySelector('.product-list-thumb-name');
+      var name = n ? n.textContent.trim() : (a.getAttribute('title') || '').trim();
+      if (!name) return;
+      a.querySelectorAll('img').forEach(function (im) { if (!im.getAttribute('alt')) im.alt = name; });
+    });
+    var h1 = document.querySelector('.product-container h1, main h1');
+    var pname = h1 ? h1.textContent.trim() : '';
+    if (pname) document.querySelectorAll('.product-thumbnails--item img').forEach(function (im, i) {
+      if (!im.getAttribute('alt')) im.alt = pname + ' ' + (i + 1);
+    });
+    document.querySelectorAll('img.lazyload, img[loading="lazy"]').forEach(function (im) {
+      if (!im.hasAttribute('decoding')) im.decoding = 'async';
+    });
+  }
+  run();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+})();
+
 /* === Videos en lecture automatique (Studio, fiches produit, splash) === */
 /* Safari iOS : sans son + inline + autoplay + loop en attributs ET en */
 /* proprietes (defaultMuted compris), play() rappele au chargement des */
