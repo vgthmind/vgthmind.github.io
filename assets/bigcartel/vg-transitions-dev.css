@@ -963,9 +963,12 @@ body .vg-splash-playing .vg-splash-video.vg-active{
 /* Elements deja visibles a l'arrivee : affiches d'un coup, sans le fondu */
 /* .vg-reveal du Body (qui reste actif pour la suite de la page). */
 .vg-reveal.vg-instant{transition:none !important;}
-/* Ancres et retours : le titre ne se cale jamais sous le header fixe. */
-html{scroll-padding-top:calc(var(--header-height, 90px) + 16px);}
-main h1{scroll-margin-top:calc(var(--header-height, 90px) + 16px);}
+/* Titres jamais sous le header fixe (au chargement, apres une ancre, au */
+/* retour) : decalage du contenu et marges de defilement = hauteur REELLE */
+/* du header, mesuree par le JS (--vg-header-h), sinon celle du theme. */
+body{padding-top:var(--vg-header-h, var(--header-height)) !important;}
+html{scroll-padding-top:calc(var(--vg-header-h, var(--header-height, 95px)) + 16px) !important;}
+main h1, main h2, main [id]{scroll-margin-top:calc(var(--vg-header-h, var(--header-height, 95px)) + 16px) !important;}
 
 /* === PAGE STUDIO : video d'atelier en boucle en haut de page === */
 /* (inseree par vg-transitions-dev.js sur /studio ; texte = page BigCartel) */
@@ -998,4 +1001,39 @@ main h1{scroll-margin-top:calc(var(--header-height, 90px) + 16px);}
   pointer-events:none;
   border:1.5px solid rgba(255,255,255,0.75);
   box-shadow:0 0 0 1px rgba(120,124,132,0.35) inset;
+}
+
+/* === Pages bilingues (Studio, Info & Terms) : separation ENGLISH / FRANCAIS === */
+/* (option A choisie par Jules le 2026-09-29) : intitule dans une pill chromee */
+/* comme celles du header, pose sur un filet chrome. Balise dans le contenu */
+/* de la page : <p class="vg-lang-sep"><span>English</span></p>. */
+.vg-lang-sep{
+  display:flex !important;
+  align-items:center !important;
+  gap:14px !important;
+  margin:36px 0 22px !important;
+  padding:0 !important;
+  text-align:center !important;
+}
+.vg-lang-sep:first-child{margin-top:8px !important;}
+.vg-lang-sep::before,
+.vg-lang-sep::after{
+  content:'' !important;
+  flex:1 !important;
+  height:2px !important;
+  border-radius:2px !important;
+  background:linear-gradient(90deg, transparent, #c7cbd0 20%, #8f939a 50%, #c7cbd0 80%, transparent) !important;
+}
+.vg-lang-sep > span{
+  font-family:'IBM Plex Mono',monospace !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  letter-spacing:0.16em !important;
+  text-transform:uppercase !important;
+  color:#1f2022 !important;
+  padding:8px 18px !important;
+  border-radius:999px !important;
+  background:linear-gradient(155deg,#eef0f2 0%,#c7cbd0 24%,#8f939a 50%,#d8dbde 68%,#6f7379 100%) !important;
+  box-shadow:0 3px 0 #6f7379, 0 6px 12px rgba(0,0,0,0.14) !important;
+  white-space:nowrap !important;
 }
