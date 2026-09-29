@@ -1519,3 +1519,83 @@ window.__vgTrim = window.__vgTrim || (function () {
   }, true);
 })();
 
+
+/* === SECTION 6 : arrivee nette sur les pages (Products, fiche produit) === */
+/* "Images floues/delavees a l'arrivee" (diagnostic 2026-09-29 sur le vrai */
+/* brouillon) : (1) un script du Body (.vg-reveal, travail de nuit) met */
+/* chaque produit et la fiche produit a opacity:0 et ne les fait apparaitre */
+/* (0,6 s) qu'en entrant dans l'ecran -> juste apres une transition, toute */
+/* la grille est delavee ; (2) les vignettes du theme demarrent en 20 px */
+/* floutees (blur-up) jusqu'a ce que theme.js, charge tout a la fin, les */
+/* promeuve. Ici : ce qui est DEJA visible a l'arrivee s'affiche tout de */
+/* suite, net et opaque (le fondu au defilement reste pour la suite de la */
+/* page), et les images visibles recoivent leur vraie resolution sans */
+/* attendre theme.js. */
+(function () {
+  function inView(el) {
+    var r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight && r.width > 0;
+  }
+  function promote(img) {
+    var set = img.getAttribute('data-srcset');
+    if (!set || img.getAttribute('srcset')) return;
+    var w = Math.round(img.getBoundingClientRect().width) || 320;
+    img.setAttribute('sizes', w + 'px');
+    img.setAttribute('srcset', set);
+    var done = function () { img.classList.remove('lazyload', 'lazyloading'); img.classList.add('lazyloaded'); };
+    if (img.complete && img.currentSrc && img.currentSrc.indexOf('w=20') === -1) done();
+    else img.addEventListener('load', done, { once: true });
+  }
+  function run() {
+    document.querySelectorAll('.product-list-image-container img.lazyload, .product-images img.lazyload').forEach(function (img) {
+      if (inView(img)) promote(img);
+    });
+    document.querySelectorAll('.vg-reveal:not(.vg-visible)').forEach(function (el) {
+      if (!inView(el)) return;
+      el.classList.add('vg-instant', 'vg-visible');
+      setTimeout(function () { el.classList.remove('vg-instant'); }, 50);
+    });
+  }
+  run();
+  // Le script .vg-reveal du Body s'arme au DOMContentLoaded (ecouteur
+  // enregistre avant celui-ci) : on repasse juste apres lui.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  window.addEventListener('pageshow', run);
+})();
+
+/* === SECTION 6 : titre de page jamais a moitie sous le header === */
+/* Quand on s'arrete de defiler avec le titre de la page (1er h1 du main) */
+/* coupe par le bas du header fixe, la page glisse doucement jusqu'a la */
+/* position la plus proche ou il est soit entierement visible, soit */
+/* entierement cache. Jamais pendant qu'un doigt touche l'ecran. */
+(function () {
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var timer = null, touching = false, settling = false;
+  function headerBottom() {
+    var hd = document.querySelector('.header');
+    var b = hd ? hd.getBoundingClientRect().bottom : 0;
+    return b > 0 ? b : 0;
+  }
+  function settle() {
+    if (touching || window.__vgTransitioning || document.documentElement.classList.contains('vg-lightbox-open')) return;
+    var h = document.querySelector('main h1');
+    if (!h) return;
+    var r = h.getBoundingClientRect();
+    var hb = headerBottom();
+    if (!r.height || !(r.top < hb - 1 && r.bottom > hb + 1)) return;
+    var up = hb - r.top + 12;     // defilement pour le revoir en entier
+    var down = r.bottom - hb + 2; // defilement pour le cacher en entier
+    var y = window.scrollY;
+    var target = up <= down ? Math.max(0, y - up) : y + down;
+    settling = true;
+    window.scrollTo({ top: target, behavior: reduceMotion ? 'auto' : 'smooth' });
+    setTimeout(function () { settling = false; }, 500);
+  }
+  window.addEventListener('scroll', function () {
+    if (settling) return;
+    clearTimeout(timer);
+    timer = setTimeout(settle, 180);
+  }, { passive: true });
+  window.addEventListener('touchstart', function () { touching = true; clearTimeout(timer); }, { passive: true });
+  window.addEventListener('touchend', function () { touching = false; clearTimeout(timer); timer = setTimeout(settle, 350); }, { passive: true });
+})();
