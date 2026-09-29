@@ -1566,41 +1566,27 @@ window.__vgTrim = window.__vgTrim || (function () {
   window.addEventListener('pageshow', run);
 })();
 
-/* === SECTION 6 : titre de page jamais a moitie sous le header === */
-/* Quand on s'arrete de defiler avec le titre de la page (1er h1 du main) */
-/* coupe par le bas du header fixe, la page glisse doucement jusqu'a la */
-/* position la plus proche ou il est soit entierement visible, soit */
-/* entierement cache. Jamais pendant qu'un doigt touche l'ecran. */
+/* === SECTION 6 : titres jamais sous le header, corrige a la source === */
+/* (vgthmind, 2026-09-29 : la page ne doit JAMAIS bouger toute seule -- l'ancien */
+/* recalage apres defilement est retire.) Le header est fixe et sa hauteur */
+/* reelle depend du Custom CSS (22 px de marge haut/bas, 10 px une fois */
+/* defile) : on la mesure (etat NON defile, suivi par ResizeObserver) dans */
+/* --vg-header-h, que le CSS utilise pour le decalage du contenu */
+/* (padding-top du body), scroll-padding-top et scroll-margin-top -> un */
+/* titre n'arrive jamais sous le header, au chargement comme apres une ancre. */
 (function () {
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var timer = null, touching = false, settling = false;
-  function headerBottom() {
-    var hd = document.querySelector('.header');
-    var b = hd ? hd.getBoundingClientRect().bottom : 0;
-    return b > 0 ? b : 0;
+  var hd = document.querySelector('.header');
+  if (!hd) return;
+  var root = document.documentElement;
+  function upd() {
+    if (hd.classList.contains('vg-scrolled')) return;
+    var h = Math.round(hd.getBoundingClientRect().height);
+    if (h > 0) root.style.setProperty('--vg-header-h', h + 'px');
   }
-  function settle() {
-    if (touching || window.__vgTransitioning || document.documentElement.classList.contains('vg-lightbox-open')) return;
-    var h = document.querySelector('main h1');
-    if (!h) return;
-    var r = h.getBoundingClientRect();
-    var hb = headerBottom();
-    if (!r.height || !(r.top < hb - 1 && r.bottom > hb + 1)) return;
-    var up = hb - r.top + 12;     // defilement pour le revoir en entier
-    var down = r.bottom - hb + 2; // defilement pour le cacher en entier
-    var y = window.scrollY;
-    var target = up <= down ? Math.max(0, y - up) : y + down;
-    settling = true;
-    window.scrollTo({ top: target, behavior: reduceMotion ? 'auto' : 'smooth' });
-    setTimeout(function () { settling = false; }, 500);
-  }
-  window.addEventListener('scroll', function () {
-    if (settling) return;
-    clearTimeout(timer);
-    timer = setTimeout(settle, 180);
-  }, { passive: true });
-  window.addEventListener('touchstart', function () { touching = true; clearTimeout(timer); }, { passive: true });
-  window.addEventListener('touchend', function () { touching = false; clearTimeout(timer); timer = setTimeout(settle, 350); }, { passive: true });
+  upd();
+  if (window.ResizeObserver) new ResizeObserver(upd).observe(hd);
+  window.addEventListener('resize', upd);
+  window.addEventListener('load', upd);
 })();
 
 /* === PAGE STUDIO : video d'atelier (8,6 s, sans son, en boucle) === */
@@ -1647,14 +1633,3 @@ window.__vgTrim = window.__vgTrim || (function () {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
 
-/* DEBUG TEMPORAIRE geometrie header */
-(function () {
-  function rep() {
-    var hd = document.querySelector('.header'), m = document.querySelector('main'), h = document.querySelector('main h1');
-    var cs = hd ? getComputedStyle(hd) : null, r = hd ? hd.getBoundingClientRect() : null;
-    var msg = 'VGH ' + location.pathname + ' sy=' + Math.round(scrollY) + ' hdpos=' + (cs && cs.position) + ' hd=' + (r && Math.round(r.top) + '..' + Math.round(r.bottom)) + ' var=' + getComputedStyle(document.documentElement).getPropertyValue('--header-height') +
-      ' main=' + (m && Math.round(m.getBoundingClientRect().top) + ' pt=' + getComputedStyle(m).paddingTop) + ' h1=' + (h && Math.round(h.getBoundingClientRect().top) + '..' + Math.round(h.getBoundingClientRect().bottom)) + ' bodypt=' + getComputedStyle(document.body).paddingTop + ' iw=' + innerWidth;
-    setTimeout(function () { throw new Error(msg); });
-  }
-  if (document.readyState === 'complete') setTimeout(rep, 300); else window.addEventListener('load', function () { setTimeout(rep, 300); });
-})();
