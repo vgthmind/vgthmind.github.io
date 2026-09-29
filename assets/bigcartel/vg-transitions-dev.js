@@ -1151,6 +1151,11 @@ window.__vgTrim = window.__vgTrim || (function () {
     void getComputedStyle(box).transform;
     box.classList.add('is-open');
     state.opened = true;
+    if (el.classList.contains('product-images')) setTimeout(function () {
+      var cs = getComputedStyle(box), br = box.getBoundingClientRect(), sr = d.src.getBoundingClientRect();
+      var f = function (im) { if (!im) return 'none'; var c = getComputedStyle(im); return c.opacity + '/' + im.naturalWidth + '/' + im.complete; };
+      setTimeout(function () { throw new Error('VGDBG cur=' + (current === state) + ' box ' + Math.round(br.left) + ',' + Math.round(br.top) + ' w' + Math.round(br.width) + ' src ' + Math.round(sr.left) + ',' + Math.round(sr.top) + ' w' + Math.round(sr.width) + ' cls ' + box.className + ' A ' + f(ia) + ' B ' + f(state.ib) + ' SRCop ' + getComputedStyle(d.src).opacity + ' n=' + document.querySelectorAll('.vg-pop').length + ' imgs=' + el.querySelectorAll('.zoom-image-container img, img.product-image').length); });
+    }, 1500);
     if (state.ib) scheduleSwap(state, 140);
   }
 
