@@ -31,7 +31,7 @@ html,body{overflow-x:clip !important;}
 @keyframes vg-fade-out{to{opacity:0;}}
 @keyframes vg-fade-in{from{opacity:0;}to{opacity:1;}}
 
-#vg-transition-out{position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;z-index:2147483647 !important;pointer-events:none !important;background:transparent !important;}
+#vg-transition-out{position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;height:100dvh !important;z-index:2147483647 !important;pointer-events:none !important;background:transparent !important;}
 /* SECTION 3 : --vg-out-x/--vg-out-y (poses par JS quand pageTransition() */
 /* recoit x/y) deplacent l'icone du centre (valeur par defaut 50%) vers le */
 /* point clique -- meme mecanisme que --vg-origin ci-dessus. */
@@ -822,6 +822,7 @@ body .vg-category-tile.vg-tile-featured{
 /* que la fenetre moins le header (sinon son haut passe sous le header). */
 body .product-images img{
   max-height:calc(100vh - var(--header-height, 90px) - 40px) !important;
+  max-height:calc(100svh - var(--header-height, 90px) - 40px) !important;
 }
 body .product-images{
   scroll-margin-top:calc(var(--header-height, 90px) + 16px) !important;
@@ -1037,8 +1038,3 @@ main h1, main h2, main [id]{scroll-margin-top:calc(var(--vg-header-h, var(--head
   box-shadow:0 3px 0 #6f7379, 0 6px 12px rgba(0,0,0,0.14) !important;
   white-space:nowrap !important;
 }
-
-/* Mode comparaison des tailles de pop (#vgpop=... dans l'adresse) : pop */
-/* fige a sa taille finale pour les captures. A retirer a la publication. */
-html.vg-popshot .vg-pop,
-html.vg-popshot .vg-pop-img{transition:none !important;}

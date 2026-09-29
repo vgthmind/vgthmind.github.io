@@ -727,6 +727,8 @@ window.__vgProducts = window.__vgProducts || fetch('/products.json').then(functi
         v.className = 'vg-splash-video';
         v.muted = true;
         v.playsInline = true;
+        // Safari iOS : attributs HTML en plus des proprietes (lecture inline, sans son)
+        v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
         v.preload = 'auto';
         splash.appendChild(v);
       });
@@ -909,11 +911,8 @@ window.__vgTrim = window.__vgTrim || (function () {
   // Meme taille pour tous (tuiles de l'accueil, Latest Drop compris, et
   // grilles produits) : ~1,75x une vignette de grille desktop (~320px).
   // Facteurs de taille (tuiles : x la tuile normale ; grilles : x la taille
-  // de base). Mode comparaison pour Jules : #vgpop=<tuile>,<grille> dans
-  // l'adresse (invisible pour les visiteurs, a retirer a la publication).
-  var TILE_K = 1.7, GRID_K = 1;
-  var qk = (location.hash.match(/vgpop=([\d.]+),([\d.]+)/) || []);
-  if (qk[1]) { TILE_K = +qk[1]; GRID_K = +qk[2]; document.documentElement.classList.add('vg-popshot'); }
+  // de base). Choix de Jules (2026-09-29) : tuiles 2,1x, grilles taille actuelle.
+  var TILE_K = 2.1, GRID_K = 1;
   function popSize() {
     return Math.round(Math.min(560 * GRID_K, window.innerHeight * 0.72 * GRID_K, window.innerWidth * 0.5 * GRID_K));
   }
@@ -1610,7 +1609,8 @@ window.__vgTrim = window.__vgTrim || (function () {
     } else {
       var v = document.createElement('video');
       v.muted = true; v.loop = true; v.playsInline = true;
-      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('aria-hidden', 'true');
+      v.autoplay = true; v.setAttribute('autoplay', '');
       v.preload = 'none';
       v.poster = poster;
       box.appendChild(v);
