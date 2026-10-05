@@ -883,7 +883,7 @@ window.__vgTrim = window.__vgTrim || (function () {
 })();
 
 /* === SECTIONS 4 ET 5 : pop au survol (grilles produits, tuiles de */
-/* l'accueil, image principale de la fiche produit) === */
+/* l'accueil) === */
 /* UN SEUL systeme de survol. Il remplace les 3 qui se chevauchaient : */
 /* l'image d'origine grossie "en flux" (width:320px, qui debordait et */
 /* passait sous le header), .vg-hover-swap (fondu PAR-DESSUS une base */
@@ -896,14 +896,22 @@ window.__vgTrim = window.__vgTrim || (function () {
 /* disparait pendant que l'autre apparait). L'image d'origine est masquee */
 /* pendant le pop. Souris uniquement (rien sur tactile), rien en */
 /* prefers-reduced-motion. transform/opacity uniquement. */
+/* [MAJ] Pop de l'image principale de la fiche produit : SUPPRIME (retour */
+/* video de vgthmind, pas juste neutralise en CSS) -- trop sensible, gardait */
+/* seulement les fleches/vignettes/zoom existants. Et sur les grilles/tuiles */
+/* restantes, le declenchement etait trop sensible et parfois decale par */
+/* rapport au vetement reel (meme bug de fond) : la zone de declenchement */
+/* est maintenant la boite rognee __vgTrim (zone non transparente du */
+/* vetement) reduite de 10% plutot que tout le rectangle de la vignette, */
+/* avec un delai d'intention (~120ms de presence continue avant d'ouvrir), */
+/* une suppression pendant le defilement (+ ~150ms apres), et une fermeture */
+/* immediate si la fenetre defile/change de taille pendant qu'un pop est */
+/* ouvert -- voir le bloc de declenchement en bas de cette IIFE. */
 (function () {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduceMotion) return;
 
-  // Fiche produit : UNE seule cible pour toute la zone image (avant : la
-  // diapo ET le lien de zoom qu'elle contient, le pop se fermait et se
-  // rouvrait en passant de l'un a l'autre = alternance face/dos).
-  var TARGETS = '.product-list-link, .vg-category-tile, .product-images';
+  var TARGETS = '.product-list-link, .vg-category-tile';
   var current = null;
   // Element actuellement sous la souris (suivi explicite : l'etat :hover
   // peut etre en retard d'un instant dans l'apercu mis a l'echelle).
@@ -1048,36 +1056,7 @@ window.__vgTrim = window.__vgTrim || (function () {
       }
       return { src: img, rectEl: img, a: rest, b: second, mode: 'fixed' };
     }
-    // Fiche produit : image REELLEMENT affichee dans la fenetre du carrousel
-    // (la classe is-active peut designer une copie hors ecran du carrousel
-    // en boucle : le pop partait alors hors ecran et une autre diapo restait
-    // visible), pop sur place + photo suivante detouree du meme produit.
-    var mainImg = visibleImg(el);
-    if (!mainImg) return null;
-    var prod = findProduct(products, slugOf(location.pathname));
-    var shown = mainImg.currentSrc || mainImg.src;
-    var next = null;
-    if (prod) {
-      var ids = cutoutIndexes(prod);
-      var cur = -1;
-      for (var j = 0; j < (prod.images || []).length; j++) { if (samePath(prod.images[j].url, shown)) { cur = j; break; } }
-      for (var q = 0; q < ids.length; q++) { if (ids[q] !== cur) { next = sized(prod.images[ids[q]].url, 1200); break; } }
-    }
-    return { src: mainImg, rectEl: mainImg, a: shown, b: next, mode: 'inplace' };
-  }
-
-  function visibleImg(el) {
-    var win = el.querySelector('.splide__track') || el;
-    var wr = win.getBoundingClientRect();
-    var best = null, bestA = 0;
-    el.querySelectorAll('.zoom-image-container img, img.product-image').forEach(function (im) {
-      var r = im.getBoundingClientRect();
-      var w = Math.min(r.right, wr.right) - Math.max(r.left, wr.left);
-      var h = Math.min(r.bottom, wr.bottom) - Math.max(r.top, wr.top);
-      var a = (w > 0 && h > 0) ? w * h : 0;
-      if (a > bestA) { bestA = a; best = im; }
-    });
-    return best;
+    return null;
   }
 
   function contentRect(img) {
@@ -1109,36 +1088,25 @@ window.__vgTrim = window.__vgTrim || (function () {
     if (!r.width || !r.height) return;
     var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     var size, s0, target = null;
-    if (d.mode === 'inplace') {
-      size = Math.max(r.width, r.height) * 1.08;
-      s0 = 1 / 1.08;
-      // Fiche produit : la photo affichee ne bouge pas ; la 2e photo est
-      // recadree pour que son vetement ait la meme taille et la meme place.
-      if (boxA) {
-        var gi = TRIM.garment(boxA, { left: 0, top: 0, width: size, height: size });
-        target = { g: gi.size, x: gi.cx, y: gi.cy, frameA: false };
-      }
-    } else {
-      var isTile = el.classList.contains('vg-category-tile');
-      // Jamais par-dessus les pills du header (tuiles ET grilles, demande de
-      // vgthmind du 2026-09-29) et toujours entier dans la fenetre.
-      var top = headerBottom() + 8;
-      size = Math.min(isTile ? tileSize() : popSize(), window.innerHeight - top - 8, window.innerWidth - 16);
-      s0 = Math.max(r.width, r.height) / size;
-      if (boxA) {
-        // Le vetement (pas la photo) a le meme poids visuel pour tous, et le
-        // pop part exactement du vetement de la vignette.
-        var gA = gFor(boxA, size);
-        var gv = TRIM.garment(boxA, r);
-        s0 = gv.size / gA;
-        cx = gv.cx; cy = gv.cy;
-        target = { g: gA, auto: true, x: size / 2, y: size / 2, frameA: true };
-      }
-      // Jamais coupe : le pop reste entierement dans la fenetre.
-      var half = size / 2 + 8;
-      cx = Math.min(Math.max(cx, half), window.innerWidth - half);
-      cy = Math.min(Math.max(cy, top + size / 2), window.innerHeight - half);
+    var isTile = el.classList.contains('vg-category-tile');
+    // Jamais par-dessus les pills du header (tuiles ET grilles, demande de
+    // vgthmind du 2026-09-29) et toujours entier dans la fenetre.
+    var top = headerBottom() + 8;
+    size = Math.min(isTile ? tileSize() : popSize(), window.innerHeight - top - 8, window.innerWidth - 16);
+    s0 = Math.max(r.width, r.height) / size;
+    if (boxA) {
+      // Le vetement (pas la photo) a le meme poids visuel pour tous, et le
+      // pop part exactement du vetement de la vignette.
+      var gA = gFor(boxA, size);
+      var gv = TRIM.garment(boxA, r);
+      s0 = gv.size / gA;
+      cx = gv.cx; cy = gv.cy;
+      target = { g: gA, auto: true, x: size / 2, y: size / 2, frameA: true };
     }
+    // Jamais coupe : le pop reste entierement dans la fenetre.
+    var half = size / 2 + 8;
+    cx = Math.min(Math.max(cx, half), window.innerWidth - half);
+    cy = Math.min(Math.max(cy, top + size / 2), window.innerHeight - half);
     var box = document.createElement('div');
     box.className = 'vg-pop';
     box.style.width = size + 'px';
@@ -1240,32 +1208,78 @@ window.__vgTrim = window.__vgTrim || (function () {
     setTimeout(preloadAll, 3500);
   }
 
-  // Fiche produit : seule l'image elle-meme declenche le pop (pas les
-  // fleches, les vignettes, le compteur).
   function targetOf(t) {
-    var el = t.closest ? t.closest(TARGETS) : null;
-    if (el && el.classList.contains('product-images')) {
-      if (!t.closest('.zoom-image-container, .splide__slide') || t.closest('button, .splide__arrows, .product-thumbnails-buttons-container, .mobile-buttons-indicator')) el = null;
-    }
-    return el;
+    return t.closest ? t.closest(TARGETS) : null;
   }
 
-  document.addEventListener('pointerover', function (e) {
-    if (e.pointerType && e.pointerType !== 'mouse') return;
-    var el = targetOf(e.target);
-    overEl = el;
-    if (current && el === current.el) return;
-    if (current) close(false);
-    tryOpen(el);
-  }, true);
-
-  // Ecran tactile (pointeur principal pas une souris) : aucun pop, jamais.
+  // [MAJ, retour video de vgthmind] Declenchement revu en entier : avant, tout
+  // survol de la vignette (son rectangle complet, y compris le vide autour
+  // d'un vetement detoure) ouvrait le pop instantanement -- trop sensible,
+  // et le pop pouvait se retrouver decale si la page avait defile ou si la
+  // fenetre avait change de taille entre-temps. Maintenant :
+  // - zone de declenchement = la boite __vgTrim (vetement reellement
+  //   visible, pas le rectangle de l'image) reduite de 10% vers l'interieur
+  //   (OPEN_SCALE) -- un survol dans le vide autour du vetement ne declenche
+  //   plus rien ;
+  // - delai d'intention : il faut rester en continu dans cette zone ~120ms
+  //   (INTENT_MS) avant que le pop parte (un simple passage ne suffit pas) ;
+  // - suppression pendant le defilement + ~150ms apres (SCROLL_SUPPRESS_MS) ;
+  // - position et fermeture recalculees en direct : open() relit toujours
+  //   getBoundingClientRect() au moment ou le pop s'affiche (deja le cas),
+  //   et un pop deja ouvert se ferme immediatement au moindre scroll/resize ;
+  // - pour sortir, la meme zone reduite, avec une marge de tolerance
+  //   (EXIT_MARGIN) pour ne pas clignoter pile au bord du vetement.
   var FINE = window.matchMedia('(hover: hover) and (pointer: fine)');
-  function tryOpen(el) {
+  var OPEN_SCALE = 0.9;
+  var EXIT_MARGIN = 10; // px, tolerance de sortie autour de la zone reduite
+  var INTENT_MS = 120;
+  var SCROLL_SUPPRESS_MS = 150;
+  var lastScrollTs = 0;
+  var pendingTimer = null, pendingEl = null;
+
+  function scrollSuppressed() { return (Date.now() - lastScrollTs) < SCROLL_SUPPRESS_MS; }
+
+  function clearPending() {
+    if (pendingTimer) clearTimeout(pendingTimer);
+    pendingTimer = null;
+    pendingEl = null;
+  }
+
+  // Boite __vgTrim (zone non transparente) de l'element survole, en
+  // coordonnees viewport -- meme calcul que open() pour la vignette elle-meme
+  // (voir le bloc "Tuile : fond en contain" plus haut), reutilise ici pour
+  // le test de position de la souris plutot que pour le placement du pop.
+  function trimZone(el, products) {
+    var d = describe(el, products || []);
+    if (!d) return null;
+    var r = (d.src.tagName === 'IMG') ? contentRect(d.src) : d.rectEl.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    var boxA = TRIM.get(d.a);
+    if (boxA) {
+      var gt = TRIM.garment(boxA, r);
+      r = { left: gt.ox, top: gt.oy, width: gt.dw, height: gt.dh };
+    }
+    return { d: d, rect: r };
+  }
+
+  function shrinkRect(r, scale) {
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var w = r.width * scale, h = r.height * scale;
+    return { left: cx - w / 2, top: cy - h / 2, right: cx + w / 2, bottom: cy + h / 2 };
+  }
+
+  function expandRect(r, m) {
+    return { left: r.left - m, top: r.top - m, right: r.right + m, bottom: r.bottom + m };
+  }
+
+  function pointInRect(x, y, r) {
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+
+  function tryOpen(el, d) {
     if (!el || !FINE.matches || window.__vgTransitioning || document.querySelector('.pswp--open')) return;
     var target = el;
-    watchSlides();
-    var d = describe(target, productsNow || []);
+    if (!d) d = describe(target, productsNow || []);
     if (!d) return;
     open(target, d);
     if (!productsNow && !d.b) {
@@ -1277,42 +1291,69 @@ window.__vgTrim = window.__vgTrim || (function () {
     }
   }
 
-  // Le pop se ferme au defilement ; si la souris est restee sur la meme
-  // vignette, aucun pointerover ne repart : le moindre mouvement le rouvre.
-  document.addEventListener('pointermove', function (e) {
-    if (current || !overEl) return;
+  // Arme (ou reinitialise) le minuteur d'intention pour `el` si la souris
+  // est dans sa zone reduite ; l'annule si elle en est sortie.
+  function maybeArm(el, x, y) {
+    if (scrollSuppressed()) { clearPending(); return; }
+    var z = trimZone(el, productsNow || []);
+    if (!z || !pointInRect(x, y, shrinkRect(z.rect, OPEN_SCALE))) { clearPending(); return; }
+    if (pendingEl === el) return; // deja en train de patienter sur ce meme element
+    clearPending();
+    pendingEl = el;
+    pendingTimer = setTimeout(function () {
+      pendingTimer = null;
+      var e2 = pendingEl;
+      pendingEl = null;
+      if (e2 !== el || overEl !== el || scrollSuppressed()) return;
+      tryOpen(el, z.d);
+    }, INTENT_MS);
+  }
+
+  function onPointerActivity(e) {
     if (e.pointerType && e.pointerType !== 'mouse') return;
-    tryOpen(overEl);
-  }, { passive: true, capture: true });
+    if (!overEl) { clearPending(); return; }
+    if (current && current.el === overEl) {
+      // Pop deja ouvert pour cet element : on le ferme seulement en sortant
+      // de sa zone reduite (+ marge de tolerance), pas au bord du rectangle
+      // complet de la vignette.
+      var z = trimZone(overEl, productsNow || []);
+      if (z && !pointInRect(e.clientX, e.clientY, expandRect(shrinkRect(z.rect, OPEN_SCALE), EXIT_MARGIN))) close(false);
+      return;
+    }
+    maybeArm(overEl, e.clientX, e.clientY);
+  }
+
+  document.addEventListener('pointerover', function (e) {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    var el = targetOf(e.target);
+    overEl = el;
+    if (current && el !== current.el) close(false);
+    if (!el) clearPending();
+    else onPointerActivity(e);
+  }, true);
+
+  document.addEventListener('pointermove', onPointerActivity, { passive: true, capture: true });
 
   document.addEventListener('pointerout', function (e) {
     var to = e.relatedTarget;
-    if (overEl && (!to || !overEl.contains(to))) overEl = null;
-    if (!current) return;
-    if (to && current.el.contains(to)) return;
-    if (!current.el.contains(e.target)) return;
-    close(false);
+    if (overEl && (!to || !overEl.contains(to))) { overEl = null; clearPending(); }
+    // Filet de secours seulement : le pointeur a quitte le document entier
+    // (alt-tab, sortie par un bord de fenetre) sans declencher de nouveau
+    // pointermove -- la sortie normale (bouger vers un voisin) est deja
+    // geree par le test de zone ci-dessus, qui tolere de rester a
+    // l'interieur du meme <a> (texte/prix) sans fermer le pop a tort.
+    if (current && !to) close(false);
   }, true);
 
   // Au clic (section 3 / navigation), le pop disparait immediatement : la
   // transition doit partir de la vignette au repos.
-  document.addEventListener('click', function () { overEl = null; close(true); }, true);
-  window.addEventListener('scroll', function () { close(true); }, { passive: true });
-  // Carrousel de la fiche produit : des qu'une diapo bouge (fleche, clavier,
-  // glisser), le pop disparait -- jamais de pop qui glisse avec la diapo. Il
-  // revient au prochain mouvement de souris, sur la nouvelle diapo active.
-  var slideWatch = null;
-  function watchSlides() {
-    if (slideWatch || !window.MutationObserver) return;
-    var list = document.querySelector('.product-images .splide__list');
-    if (!list) return;
-    slideWatch = new MutationObserver(function () {
-      if (!current || !current.el.classList.contains('product-images')) return;
-      if (visibleImg(current.el) !== current.d.src) close(true);
-    });
-    slideWatch.observe(list, { attributes: true, subtree: true, attributeFilter: ['class'] });
-  }
-  window.addEventListener('blur', function () { close(true); });
+  document.addEventListener('click', function () { overEl = null; clearPending(); close(true); }, true);
+  // Jamais de pop decale : fermeture immediate au moindre scroll/resize
+  // pendant qu'un pop est ouvert, et suppression des ouvertures pendant le
+  // defilement + un court delai apres (SCROLL_SUPPRESS_MS).
+  window.addEventListener('scroll', function () { lastScrollTs = Date.now(); clearPending(); close(true); }, { passive: true });
+  window.addEventListener('resize', function () { clearPending(); close(true); }, { passive: true });
+  window.addEventListener('blur', function () { clearPending(); close(true); });
 })();
 
 /* === SECTION 3 : clic produit/categorie (CLAUDE.md section 3) === */
