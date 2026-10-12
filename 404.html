@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>vgthmind</title>
+<script>
+// L'ancienne boutique (vgthmind.github.io/shop/...) a déménagé sur www.vgthmind.org :
+// même page, même adresse sans le « /shop » (paramètres et ancre gardés).
+// Seules les adresses /shop et /shop/... sont concernées ; le reste du portfolio n'est pas touché.
+(function () {
+  var p = location.pathname;
+  if (p === '/shop' || p.indexOf('/shop/') === 0) {
+    location.replace('https://www.vgthmind.org' + (p.slice(5) || '/') + location.search + location.hash);
+  }
+})();
+</script>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #EDEEEC; color: #1a1a1a; font: 16px/1.5 system-ui, -apple-system, sans-serif; text-align: center; padding: 0 16px; }
+  a { color: inherit; }
+</style>
+</head><body>
+<main>
+  <p>Page introuvable.</p>
+  <p><a href="/">Portfolio</a> · <a href="https://www.vgthmind.org/">Boutique</a></p>
+</main>
+</body></html>
